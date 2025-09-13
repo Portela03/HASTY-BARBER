@@ -1,17 +1,10 @@
 import React, { useState } from 'react';
-import { registerService, type RegisterBarbershopData, type RegisterBarbershopResponse } from '../services/api';
+import { Link, useNavigate } from 'react-router-dom';
+import { registerService } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
+import type { RegisterBarbershopData } from '../types';
 
-interface RegisterBarbershopProps {
-  onRegisterSuccess: (token: string, data: RegisterBarbershopResponse) => void;
-  onSwitchToLogin: () => void;
-  onSwitchToClient: () => void;
-}
-
-const RegisterBarbershop: React.FC<RegisterBarbershopProps> = ({ 
-  onRegisterSuccess, 
-  onSwitchToLogin, 
-  onSwitchToClient 
-}) => {
+const RegisterBarbershop: React.FC = () => {
   const [formData, setFormData] = useState<RegisterBarbershopData>({
     barbearia_nome: '',
     endereco: '',
@@ -25,6 +18,9 @@ const RegisterBarbershop: React.FC<RegisterBarbershopProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -53,8 +49,8 @@ const RegisterBarbershop: React.FC<RegisterBarbershopProps> = ({
 
     try {
       const response = await registerService.registerBarbershop(formData);
-      localStorage.setItem('auth_token', response.token);
-      onRegisterSuccess(response.token, response);
+      login(response.token, response.proprietario);
+      navigate('/dashboard');
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao cadastrar barbearia. Tente novamente.';
       setError(errorMessage);
@@ -64,10 +60,10 @@ const RegisterBarbershop: React.FC<RegisterBarbershopProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gray-100 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-extrabold text-gray-900">
+          <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
             Cadastre sua Barbearia
           </h2>
           <p className="mt-2 text-sm text-gray-600">
@@ -77,13 +73,12 @@ const RegisterBarbershop: React.FC<RegisterBarbershopProps> = ({
 
         <div className="bg-white shadow rounded-lg p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Informações da Barbearia */}
             <div className="border-b border-gray-200 pb-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 Informações da Barbearia
               </h3>
-              <div className="grid grid-cols-1 gap-4">
-                <div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="lg:col-span-2">
                   <label htmlFor="barbearia_nome" className="block text-sm font-medium text-gray-700">
                     Nome da Barbearia *
                   </label>
@@ -99,7 +94,7 @@ const RegisterBarbershop: React.FC<RegisterBarbershopProps> = ({
                   />
                 </div>
 
-                <div>
+                <div className="lg:col-span-2">
                   <label htmlFor="endereco" className="block text-sm font-medium text-gray-700">
                     Endereço *
                   </label>
@@ -149,7 +144,6 @@ const RegisterBarbershop: React.FC<RegisterBarbershopProps> = ({
               </div>
             </div>
 
-            {/* Informações do Proprietário */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 Informações do Proprietário
@@ -238,8 +232,10 @@ const RegisterBarbershop: React.FC<RegisterBarbershopProps> = ({
             </div>
 
             {error && (
-              <div className="text-red-600 text-sm text-center">
-                {error}
+              <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                <div className="text-red-800 text-sm text-center">
+                  {error}
+                </div>
               </div>
             )}
 
@@ -247,7 +243,7 @@ const RegisterBarbershop: React.FC<RegisterBarbershopProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-150 ease-in-out"
               >
                 {isLoading ? 'Cadastrando...' : 'Cadastrar Barbearia'}
               </button>
@@ -256,23 +252,21 @@ const RegisterBarbershop: React.FC<RegisterBarbershopProps> = ({
             <div className="text-center space-y-2">
               <p className="text-sm text-gray-600">
                 Já tem uma conta?{' '}
-                <button
-                  type="button"
-                  onClick={onSwitchToLogin}
+                <Link
+                  to="/login"
                   className="font-medium text-indigo-600 hover:text-indigo-500"
                 >
                   Faça login aqui
-                </button>
+                </Link>
               </p>
               <p className="text-sm text-gray-600">
                 É cliente?{' '}
-                <button
-                  type="button"
-                  onClick={onSwitchToClient}
+                <Link
+                  to="/register/client"
                   className="font-medium text-green-600 hover:text-green-500"
                 >
                   Cadastre-se como cliente
-                </button>
+                </Link>
               </p>
             </div>
           </form>

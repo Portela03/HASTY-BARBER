@@ -1,17 +1,9 @@
 import React, { useState } from 'react';
-import { registerService, type RegisterClientData } from '../services/api';
+import { Link, useNavigate } from 'react-router-dom';
+import { registerService } from '../services/api';
+import type { RegisterClientData } from '../types';
 
-interface RegisterClientProps {
-  onRegisterSuccess: (message: string) => void;
-  onSwitchToLogin: () => void;
-  onSwitchToBarbershop: () => void;
-}
-
-const RegisterClient: React.FC<RegisterClientProps> = ({ 
-  onRegisterSuccess, 
-  onSwitchToLogin, 
-  onSwitchToBarbershop 
-}) => {
+const RegisterClient: React.FC = () => {
   const [formData, setFormData] = useState<RegisterClientData>({
     nome: '',
     email: '',
@@ -21,6 +13,9 @@ const RegisterClient: React.FC<RegisterClientProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -34,6 +29,7 @@ const RegisterClient: React.FC<RegisterClientProps> = ({
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setSuccess('');
 
     if (formData.senha !== confirmPassword) {
       setError('As senhas não coincidem');
@@ -49,7 +45,10 @@ const RegisterClient: React.FC<RegisterClientProps> = ({
 
     try {
       const response = await registerService.registerClient(formData);
-      onRegisterSuccess(response.message || 'Cliente cadastrado com sucesso!');
+      setSuccess(response.message || 'Cliente cadastrado com sucesso!');
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao cadastrar cliente. Tente novamente.';
       setError(errorMessage);
@@ -59,13 +58,13 @@ const RegisterClient: React.FC<RegisterClientProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <div className="text-center">
+          <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
             Cadastro de Cliente
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-sm text-gray-600">
             Crie sua conta para agendar serviços
           </p>
         </div>
@@ -73,7 +72,7 @@ const RegisterClient: React.FC<RegisterClientProps> = ({
           <div className="space-y-4">
             <div>
               <label htmlFor="nome" className="block text-sm font-medium text-gray-700">
-                Nome completo
+                Nome completo *
               </label>
               <input
                 id="nome"
@@ -89,7 +88,7 @@ const RegisterClient: React.FC<RegisterClientProps> = ({
             
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
+                Email *
               </label>
               <input
                 id="email"
@@ -106,7 +105,7 @@ const RegisterClient: React.FC<RegisterClientProps> = ({
 
             <div>
               <label htmlFor="telefone" className="block text-sm font-medium text-gray-700">
-                Telefone
+                Telefone *
               </label>
               <input
                 id="telefone"
@@ -122,7 +121,7 @@ const RegisterClient: React.FC<RegisterClientProps> = ({
 
             <div>
               <label htmlFor="senha" className="block text-sm font-medium text-gray-700">
-                Senha
+                Senha *
               </label>
               <input
                 id="senha"
@@ -138,7 +137,7 @@ const RegisterClient: React.FC<RegisterClientProps> = ({
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirmar senha
+                Confirmar senha *
               </label>
               <input
                 id="confirmPassword"
@@ -154,8 +153,18 @@ const RegisterClient: React.FC<RegisterClientProps> = ({
           </div>
 
           {error && (
-            <div className="text-red-600 text-sm text-center">
-              {error}
+            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+              <div className="text-red-800 text-sm text-center">
+                {error}
+              </div>
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-md p-3">
+              <div className="text-green-800 text-sm text-center">
+                {success}
+              </div>
             </div>
           )}
 
@@ -163,7 +172,7 @@ const RegisterClient: React.FC<RegisterClientProps> = ({
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-150 ease-in-out"
             >
               {isLoading ? 'Cadastrando...' : 'Cadastrar Cliente'}
             </button>
@@ -172,23 +181,21 @@ const RegisterClient: React.FC<RegisterClientProps> = ({
           <div className="text-center space-y-2">
             <p className="text-sm text-gray-600">
               Já tem uma conta?{' '}
-              <button
-                type="button"
-                onClick={onSwitchToLogin}
+              <Link
+                to="/login"
                 className="font-medium text-indigo-600 hover:text-indigo-500"
               >
                 Faça login aqui
-              </button>
+              </Link>
             </p>
             <p className="text-sm text-gray-600">
               Quer cadastrar uma barbearia?{' '}
-              <button
-                type="button"
-                onClick={onSwitchToBarbershop}
+              <Link
+                to="/register/barbershop"
                 className="font-medium text-green-600 hover:text-green-500"
               >
                 Clique aqui
-              </button>
+              </Link>
             </p>
           </div>
         </form>
