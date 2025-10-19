@@ -1,10 +1,34 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Booking panel state
+  const [showBooking, setShowBooking] = useState(false);
+  const [booking, setBooking] = useState({
+    service: '',
+    date: '',
+    time: '',
+    barber: '',
+    notes: '',
+  });
+
+  const handleBookingChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setBooking(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleBookingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // TODO: enviar para API — por enquanto apenas log
+    console.log('Agendamento:', booking);
+    alert('Agendamento criado (mock).');
+    setShowBooking(false);
+    setBooking({ service: '', date: '', time: '', barber: '', notes: '' });
+  };
 
   const handleLogout = async (): Promise<void> => {
     try {
@@ -190,10 +214,15 @@ const Dashboard: React.FC = () => {
                     <div className="ml-5 w-0 flex-1">
                       <dl>
                         <dt className="text-sm font-medium text-gray-500 truncate">
-                          Agendar Serviço
+
                         </dt>
                         <dd className="text-lg font-medium text-gray-900">
-                          Em breve
+                          <button
+                            onClick={() => setShowBooking(true)}
+                            className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          >
+                            Agendar Serviço
+                          </button>
                         </dd>
                       </dl>
                     </div>
@@ -269,6 +298,112 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Booking slide-over */}
+        {showBooking && (
+          <div className="fixed inset-0 z-50 flex">
+            <div
+              className="fixed inset-0 bg-black/40 z-40"
+              onClick={() => setShowBooking(false)}
+              aria-hidden
+            />
+            <aside className="ml-auto w-full max-w-md bg-white shadow-xl p-6 overflow-auto z-50">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Novo Agendamento</h3>
+                <button
+                  onClick={() => setShowBooking(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                  aria-label="Fechar"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleBookingSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Serviço</label>
+                  <select
+                    name="service"
+                    value={booking.service}
+                    onChange={handleBookingChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                    required
+                  >
+                    <option value="">Selecione</option>
+                    <option value="corte">Corte</option>
+                    <option value="barba">Barba</option>
+                    <option value="sobrancelha">Sobrancelha</option>
+                    <option value="combo">Combo</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Data</label>
+                    <input
+                      type="date"
+                      name="date"
+                      value={booking.date}
+                      onChange={handleBookingChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Hora</label>
+                    <input
+                      type="time"
+                      name="time"
+                      value={booking.time}
+                      onChange={handleBookingChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Barbeiro (opcional)</label>
+                  <input
+                    type="text"
+                    name="barber"
+                    value={booking.barber}
+                    onChange={handleBookingChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                    placeholder="Nome do barbeiro"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Observações</label>
+                  <textarea
+                    name="notes"
+                    value={booking.notes}
+                    onChange={handleBookingChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowBooking(false)}
+                    className="px-4 py-2 rounded-md border border-gray-300 bg-white text-sm"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-md bg-indigo-600 text-white text-sm hover:bg-indigo-700"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </form>
+            </aside>
+          </div>
+        )}
       </div>
     </div>
   );

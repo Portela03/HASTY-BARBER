@@ -157,3 +157,11 @@ export interface NotificationContextType {
   addNotification: (notification: Omit<Notification, 'id'>) => void;
   removeNotification: (id: string) => void;
 }
+
+export interface BookingForm {
+  service: string;
+  date: string;
+  time: string;
+  barber: string;
+  notes: string;
+}
