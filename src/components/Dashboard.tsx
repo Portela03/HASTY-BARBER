@@ -6,7 +6,6 @@ const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Booking panel state
   const [showBooking, setShowBooking] = useState(false);
   const [booking, setBooking] = useState({
     service: '',
