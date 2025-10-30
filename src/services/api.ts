@@ -6,7 +6,9 @@ import type {
   RegisterClientResponse, 
   RegisterBarbershopData, 
   RegisterBarbershopResponse, 
-  ValidateTokenResponse 
+  ValidateTokenResponse,
+  BookingRequest,
+  BookingResponse,
 } from '../types';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -52,6 +54,22 @@ export const registerService = {
 
   registerBarbershop: async (data: RegisterBarbershopData): Promise<RegisterBarbershopResponse> => {
     const response = await api.post<RegisterBarbershopResponse>('/api/onboarding/barbershop', data);
+    return response.data;
+  },
+};
+
+export const bookingService = {
+  create: async (data: BookingRequest): Promise<BookingResponse> => {
+    const response = await api.post<BookingResponse>('/api/bookings', data);
+    return response.data;
+  },
+  // Placeholder for future use
+  listMine: async (): Promise<BookingResponse[]> => {
+    const response = await api.get<BookingResponse[]>('/api/bookings/me');
+    return response.data;
+  },
+  cancel: async (id: number): Promise<BookingResponse> => {
+    const response = await api.patch<BookingResponse>(`/api/bookings/${id}/cancel`, {});
     return response.data;
   },
 };

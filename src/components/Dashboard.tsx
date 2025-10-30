@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import type { BookingForm, BookingRequest, BookingResponse } from '../types';
+import { bookingService } from '../services/api';
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -8,26 +10,89 @@ const Dashboard: React.FC = () => {
 
   // Booking panel state
   const [showBooking, setShowBooking] = useState(false);
-  const [booking, setBooking] = useState({
+  const [booking, setBooking] = useState<BookingForm>({
     service: '',
     date: '',
     time: '',
     barber: '',
     notes: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Slide-over: Meus Agendamentos
+  const [showMyBookings, setShowMyBookings] = useState(false);
+  const [myBookingsTab, setMyBookingsTab] = useState<'proximos' | 'historico'>('proximos');
+  const [bookings, setBookings] = useState<BookingResponse[] | null>(null);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+  const [bookingsError, setBookingsError] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
+
+  const loadBookings = async () => {
+    if (isLoadingBookings) return;
+    setIsLoadingBookings(true);
+    setBookingsError(null);
+    try {
+      const list = await bookingService.listMine();
+      setBookings(list);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Erro ao carregar agendamentos.';
+      setBookingsError(msg);
+    } finally {
+      setIsLoadingBookings(false);
+    }
+  };
+
+  const handleOpenMyBookings = async (tab: 'proximos' | 'historico') => {
+    setMyBookingsTab(tab);
+    setShowMyBookings(true);
+    if (!bookings) await loadBookings();
+  };
+
+  const handleCancelBooking = async (id: number) => {
+    if (!window.confirm('Deseja cancelar este agendamento?')) return;
+    setCancellingId(id);
+    try {
+      await bookingService.cancel(id);
+      await loadBookings();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Erro ao cancelar agendamento.';
+      alert(msg);
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  // (Listagem de agendamentos foi movida para a página Meus Agendamentos)
 
   const handleBookingChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setBooking(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleBookingSubmit = (e: React.FormEvent) => {
+  const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: enviar para API — por enquanto apenas log
-    console.log('Agendamento:', booking);
-    alert('Agendamento criado (mock).');
-    setShowBooking(false);
-    setBooking({ service: '', date: '', time: '', barber: '', notes: '' });
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const payload: BookingRequest = {
+        service: booking.service,
+        date: booking.date,
+        time: booking.time,
+        barber: booking.barber || undefined,
+        notes: booking.notes || undefined,
+      };
+      const created = await bookingService.create(payload);
+      console.log('Agendamento criado:', created);
+      alert('Agendamento criado com sucesso.');
+      setShowBooking(false);
+      setBooking({ service: '', date: '', time: '', barber: '', notes: '' });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Erro ao criar agendamento.';
+      console.error('Erro no agendamento:', err);
+      alert(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleLogout = async (): Promise<void> => {
@@ -240,11 +305,13 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
-                          Meus Agendamentos
-                        </dt>
                         <dd className="text-lg font-medium text-gray-900">
-                          Em breve
+                          <button
+                            onClick={() => handleOpenMyBookings('proximos')}
+                            className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          >
+                            Meus Agendamentos
+                          </button>
                         </dd>
                       </dl>
                     </div>
@@ -262,11 +329,13 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
-                          Histórico
-                        </dt>
                         <dd className="text-lg font-medium text-gray-900">
-                          Em breve
+                          <button
+                            onClick={() => handleOpenMyBookings('historico')}
+                            className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          >
+                            Histórico
+                          </button>
                         </dd>
                       </dl>
                     </div>
@@ -395,12 +464,119 @@ const Dashboard: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-md bg-indigo-600 text-white text-sm hover:bg-indigo-700"
+                    disabled={isSubmitting}
+                    className={`px-4 py-2 rounded-md text-white text-sm ${isSubmitting ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
                   >
-                    Confirmar
+                    {isSubmitting ? 'Enviando...' : 'Confirmar'}
                   </button>
                 </div>
               </form>
+            </aside>
+          </div>
+        )}
+
+        {/* My Bookings slide-over */}
+        {showMyBookings && (
+          <div className="fixed inset-0 z-50 flex">
+            <div
+              className="fixed inset-0 bg-black/40 z-40"
+              onClick={() => setShowMyBookings(false)}
+              aria-hidden
+            />
+            <aside className="ml-auto w-full max-w-md bg-white shadow-xl p-6 overflow-auto z-50">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Meus Agendamentos</h3>
+                <button
+                  onClick={() => setShowMyBookings(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                  aria-label="Fechar"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mb-4 flex gap-2">
+                <button
+                  onClick={() => setMyBookingsTab('proximos')}
+                  className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium border ${myBookingsTab === 'proximos' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                >
+                  Meus Agendamentos
+                </button>
+                <button
+                  onClick={() => setMyBookingsTab('historico')}
+                  className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium border ${myBookingsTab === 'historico' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                >
+                  Histórico
+                </button>
+                <div className="ml-auto">
+                  <button
+                    onClick={loadBookings}
+                    className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Atualizar
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                {isLoadingBookings && <p>Carregando...</p>}
+                {bookingsError && <p className="text-red-600">{bookingsError}</p>}
+                {!isLoadingBookings && !bookingsError && (
+                  <ul className="divide-y divide-gray-200">
+                    {(() => {
+                      const now = new Date();
+                      const toDate = (b: BookingResponse) => new Date(`${b.date}T${b.time}:00`);
+                      const items = (bookings || []).filter((b) => {
+                        const isPast = toDate(b) < now;
+                        if (myBookingsTab === 'proximos') {
+                          return (b.status === 'pending' || b.status === 'confirmed') && !isPast;
+                        }
+                        return b.status !== 'cancelled' && isPast;
+                      }).sort((a, b) => {
+                        return myBookingsTab === 'proximos' ? (+toDate(a) - +toDate(b)) : (+toDate(b) - +toDate(a));
+                      });
+
+                      if (items.length === 0) {
+                        return (
+                          <li className="py-3">
+                            {myBookingsTab === 'proximos' ? 'Nenhum agendamento futuro.' : 'Nenhum agendamento realizado anteriormente.'}
+                          </li>
+                        );
+                      }
+
+                      return items.map((b) => (
+                        <li key={b.id} className="py-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <p className="font-medium capitalize">{b.service}</p>
+                              <p className="text-sm text-gray-600">{b.date} às {b.time}{b.barber ? ` • ${b.barber}` : ''}</p>
+                              {b.notes && <p className="text-sm text-gray-500 mt-1">{b.notes}</p>}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {myBookingsTab === 'proximos' ? (
+                                <>
+                                  <span className={`text-xs rounded-full px-2 py-0.5 ${b.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                                    {b.status}
+                                  </span>
+                                  <button
+                                    onClick={() => handleCancelBooking(b.id)}
+                                    disabled={cancellingId === b.id}
+                                    className={`inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${cancellingId === b.id ? 'bg-red-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
+                                  >
+                                    {cancellingId === b.id ? 'Cancelando...' : 'Cancelar'}
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="text-xs rounded-full px-2 py-0.5 bg-gray-100 text-gray-800">concluído</span>
+                              )}
+                            </div>
+                          </div>
+                        </li>
+                      ));
+                    })()}
+                  </ul>
+                )}
+              </div>
             </aside>
           </div>
         )}

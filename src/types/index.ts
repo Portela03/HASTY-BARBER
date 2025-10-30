@@ -165,3 +165,23 @@ export interface BookingForm {
   barber: string;
   notes: string;
 }
+
+// API contracts for bookings
+export interface BookingRequest {
+  service: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+  barber?: string;
+  notes?: string;
+}
+
+export interface BookingResponse {
+  id: number;
+  service: string;
+  date: string; // ISO string or YYYY-MM-DD
+  time: string; // HH:mm or ISO time component
+  barber?: string;
+  notes?: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  createdAt?: string;
+}
