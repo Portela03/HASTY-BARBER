@@ -4,6 +4,7 @@ export interface User {
   nome: string;
   email: string;
   tipo_usuario: string; 
+  avatar_url?: string; // URL da foto de perfil
 }
 
 
@@ -159,29 +160,97 @@ export interface NotificationContextType {
 }
 
 export interface BookingForm {
-  service: string;
+  // Selected services in the form (we derive the string payload from this)
+  service: string[];
   date: string;
   time: string;
-  barber: string;
+  // Selected barber id during creation flow (required in POST)
+  barber_id: number | '';
   notes: string;
 }
 
 // API contracts for bookings
 export interface BookingRequest {
+  id_barbearia: number;
   service: string;
   date: string; // YYYY-MM-DD
   time: string; // HH:mm
-  barber?: string;
+  barber_id: number; // required
   notes?: string;
 }
 
+export type BookingStatus = 'pendente' | 'confirmado' | 'cancelado' | 'finalizado';
+
 export interface BookingResponse {
   id: number;
+  id_barbearia?: number;
   service: string;
   date: string; // ISO string or YYYY-MM-DD
   time: string; // HH:mm or ISO time component
-  barber?: string;
+  barber_id?: number;
+  // New contract: nested barber object
+  barbeiro?: {
+    id_barbeiro: number;
+    nome: string;
+    telefone?: string;
+    avatar_url?: string;
+  } | null;
+  // Optional customer info when visible to barber/proprietário
+  cliente?: {
+    id_usuario?: number;
+    nome?: string;
+    email?: string;
+    telefone?: string;
+    avatar_url?: string;
+  } | null;
   notes?: string;
-  status: 'pending' | 'confirmed' | 'cancelled';
+  status: BookingStatus;
   createdAt?: string;
+  // Optional related data for convenience
+  barbearia?: Barbearia;
+  barbearia_nome?: string;
+}
+
+// Barbers (barbeiros)
+export interface Barbeiro {
+  id_barbeiro?: number;
+  id_usuario: number;
+  nome: string;
+  email: string;
+  telefone?: string;
+  ativo?: boolean;
+  especialidades?: string;
+  avatar_url?: string; // URL da foto de perfil do barbeiro
+}
+
+export interface CreateBarberRequest {
+  id_barbearia: number;
+  nome: string;
+  email: string;
+  telefone: string;
+  senha: string;
+  especialidades?: string;
+}
+
+// Avaliações (reviews)
+export type ReviewTarget = 'barbeiro' | 'barbearia';
+
+export interface CreateReviewRequest {
+  id_booking: number;
+  target: ReviewTarget;
+  rating: number; // 1..5
+  comentario?: string; // up to 1000 chars
+}
+
+export interface ReviewItem {
+  rating: number;
+  comentario?: string;
+  created_at: string;
+  cliente_nome?: string;
+}
+
+export interface ReviewsListResponse {
+  average: number | null;
+  total: number;
+  items: ReviewItem[];
 }
