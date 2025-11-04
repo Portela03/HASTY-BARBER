@@ -172,7 +172,8 @@ export interface BookingForm {
 // API contracts for bookings
 export interface BookingRequest {
   id_barbearia: number;
-  service: string;
+  // Accept string (legacy) or array of names (preferred)
+  service: string | string[];
   date: string; // YYYY-MM-DD
   time: string; // HH:mm
   barber_id: number; // required
@@ -185,6 +186,8 @@ export interface BookingResponse {
   id: number;
   id_barbearia?: number;
   service: string;
+  // Optional detailed services array (present on create response)
+  services?: Array<{ service_id: number; name: string; price?: number | null }>; 
   date: string; // ISO string or YYYY-MM-DD
   time: string; // HH:mm or ISO time component
   barber_id?: number;
@@ -253,4 +256,62 @@ export interface ReviewsListResponse {
   average: number | null;
   total: number;
   items: ReviewItem[];
+}
+
+// Reagendamento com aprovação
+export type RescheduleStatus = 'pendente' | 'aprovado' | 'rejeitado';
+
+export interface CreateRescheduleRequest {
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+  barber_id?: number;
+}
+
+export interface RescheduleRequestItem {
+  id: number;
+  booking_id: number;
+  target_date: string; // YYYY-MM-DD
+  target_time: string; // HH:mm
+  target_barber_id?: number;
+  status: RescheduleStatus;
+  created_at: string;
+}
+
+// Serviços da barbearia
+export interface ServiceItem {
+  id: number;
+  id_barbearia: number;
+  nome: string;
+  preco?: number | string; // apenas visual por enquanto
+  ativo?: boolean;
+  descricao?: string;
+}
+
+export interface CreateServiceRequest {
+  nome: string;
+  preco?: number | string; // apenas visual por enquanto
+  descricao?: string;
+}
+
+// Configurações da Barbearia
+export interface BusinessHour {
+  // 0 = Domingo, 1 = Segunda, ... 6 = Sábado
+  day: number;
+  // Formato HH:mm ou null para fechado
+  open: string | null;
+  close: string | null;
+}
+
+export interface BarbeariaConfig {
+  // Duração mínima do serviço em minutos
+  duration_minutes: number;
+  // Janela de cancelamento em DIAS (null = sem prazo)
+  cancel_window_days: number | null;
+  // Janela de reagendamento em DIAS (null = sem prazo)
+  reschedule_window_days: number | null;
+  // Legado opcional, apenas para leitura/fallback
+  cancel_window_minutes?: number | null;
+  reschedule_window_minutes?: number | null;
+  // Horários por dia da semana
+  business_hours: BusinessHour[];
 }
