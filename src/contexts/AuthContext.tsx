@@ -21,7 +21,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const response = await authService.validateToken();
       if (response.valid && response.usuario) {
-        setUser(response.usuario as User);
+        // Normalize avatar field and rehydrate barber avatar from localStorage if missing
+        const raw = response.usuario as any;
+        const normalized: User = {
+          id_usuario: raw.id_usuario,
+          nome: raw.nome,
+          email: raw.email,
+          tipo_usuario: raw.tipo_usuario,
+          avatar_url: raw.avatar_url ?? raw.foto_perfil ?? raw.avatar,
+        };
+        setUser(normalized);
       } else {
         logout();
       }

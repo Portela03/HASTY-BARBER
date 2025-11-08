@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { registerService } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import type { RegisterBarbershopData } from '../types';
+import { formatPhoneBR, isValidPhoneBR, normalizePhoneToDigits } from '../utils/phone';
 
 const RegisterBarbershop: React.FC = () => {
   const [formData, setFormData] = useState<RegisterBarbershopData>({
@@ -24,10 +25,15 @@ const RegisterBarbershop: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev: RegisterBarbershopData) => ({
-      ...prev,
-      [name]: value,
-    }));
+    // format phone fields visually
+    if (name === 'telefone_contato' || name === 'proprietario_telefone') {
+      setFormData((prev: RegisterBarbershopData) => ({ ...prev, [name]: formatPhoneBR(value) } as any));
+    } else {
+      setFormData((prev: RegisterBarbershopData) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,8 +53,26 @@ const RegisterBarbershop: React.FC = () => {
       return;
     }
 
+    // Validate phone fields
+    if (!isValidPhoneBR(formData.telefone_contato)) {
+      setError('Informe um telefone de contato válido com DDD (10 ou 11 dígitos).');
+      setIsLoading(false);
+      return;
+    }
+    if (!isValidPhoneBR(formData.proprietario_telefone)) {
+      setError('Informe um telefone pessoal válido do proprietário com DDD (10 ou 11 dígitos).');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await registerService.registerBarbershop(formData);
+      // normalize phones to digits-only
+      const payload: RegisterBarbershopData = {
+        ...formData,
+        telefone_contato: normalizePhoneToDigits(formData.telefone_contato) ?? '',
+        proprietario_telefone: normalizePhoneToDigits(formData.proprietario_telefone) ?? '',
+      };
+      const response = await registerService.registerBarbershop(payload);
       login(response.token, response.proprietario);
       navigate('/dashboard');
     } catch (err: unknown) {

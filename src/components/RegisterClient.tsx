@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { registerService } from '../services/api';
+import { formatPhoneBR, isValidPhoneBR, normalizePhoneToDigits } from '../utils/phone';
 import type { RegisterClientData } from '../types';
 
 const RegisterClient: React.FC = () => {
@@ -19,10 +20,15 @@ const RegisterClient: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev: RegisterClientData) => ({
-      ...prev,
-      [name]: value,
-    }));
+    // Format phone visually while storing raw string in state
+    if (name === 'telefone') {
+      setFormData((prev: RegisterClientData) => ({ ...prev, telefone: formatPhoneBR(value) }));
+    } else {
+      setFormData((prev: RegisterClientData) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,8 +49,17 @@ const RegisterClient: React.FC = () => {
       return;
     }
 
+    // Phone validation (BR): require 10 or 11 digits
+    if (!isValidPhoneBR(formData.telefone)) {
+      setError('Informe um telefone válido com DDD (10 ou 11 dígitos).');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await registerService.registerClient(formData);
+  // normalize telefone to digits-only for the API
+  const payload = { ...formData, telefone: normalizePhoneToDigits(formData.telefone) } as RegisterClientData;
+  const response = await registerService.registerClient(payload);
       setSuccess(response.message || 'Cliente cadastrado com sucesso!');
       setTimeout(() => {
         navigate('/login');

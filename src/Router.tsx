@@ -7,9 +7,10 @@ import Dashboard from './components/Dashboard';
 
 import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
+import BarbershopConfig from './components/BarbershopConfig';
 
 const AppRouter: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -43,6 +44,15 @@ const AppRouter: React.FC = () => {
           <Route 
             path="/dashboard" 
             element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />} 
+          />
+
+          <Route
+            path="/barbearias/:id/config"
+            element={
+              isAuthenticated
+                ? (user?.tipo_usuario === 'proprietario' ? <BarbershopConfig /> : <Navigate to="/dashboard" replace />)
+                : <Navigate to="/login" replace />
+            }
           />
           
  
