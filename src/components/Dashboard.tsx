@@ -1774,23 +1774,7 @@ const Dashboard: React.FC = () => {
                         </dt>
                         <dd className="text-lg font-medium text-gray-900">
                           <button
-                            onClick={async () => {
-                              setSelectedBarbershopId('');
-                              setBooking({ service: [], date: '', time: '', barber_id: '', notes: '' });
-                              setBookingStep(1);
-                              setShowBooking(true);
-                              setIsLoadingBarbershops(true);
-                              setBarbershopError(null);
-                              try {
-                                const data = await barbershopService.list();
-                                setBarbershops(data);
-                              } catch (err: any) {
-                                const msg = err?.response?.data?.message || err?.message || 'Erro ao carregar barbearias.';
-                                setBarbershopError(msg);
-                              } finally {
-                                setIsLoadingBarbershops(false);
-                              }
-                            }}
+                            onClick={() => navigate('/booking')}
                             className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                           >
                             Agendar Serviço
@@ -1814,7 +1798,7 @@ const Dashboard: React.FC = () => {
                       <dl>
                         <dd className="text-lg font-medium text-gray-900">
                           <button
-                            onClick={() => handleOpenMyBookings('proximos')}
+                            onClick={() => navigate('/my-appointments')}
                             className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                           >
                             Meus Agendamentos
@@ -1838,7 +1822,7 @@ const Dashboard: React.FC = () => {
                       <dl>
                         <dd className="text-lg font-medium text-gray-900">
                           <button
-                            onClick={() => handleOpenMyBookings('historico')}
+                            onClick={() => navigate('/appointment-history')}
                             className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                           >
                             Histórico
@@ -2310,6 +2294,22 @@ const Dashboard: React.FC = () => {
                           <div className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1 space-y-1">
+                                {/* Status badge - primeiro elemento */}
+                                {myBookingsTab === 'historico' && (
+                                  <div className="mb-2">
+                                    <span className={`inline-flex items-center gap-1 text-xs rounded-full px-2 py-0.5 capitalize font-medium ${
+                                      b.status === 'cancelado' ? 'bg-red-100 text-red-800 border border-red-200' : 
+                                      b.status === 'finalizado' ? 'bg-green-100 text-green-800 border border-green-200' : 
+                                      'bg-gray-100 text-gray-800 border border-gray-200'
+                                    }`}>
+                                      <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                        {b.status === 'cancelado' && <path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>}
+                                        {b.status === 'finalizado' && <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293A1 1 0 006.293 10.707l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>}
+                                      </svg>
+                                      {b.status}
+                                    </span>
+                                  </div>
+                                )}
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <div className="h-6 w-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium select-none overflow-hidden">
                                     {b.barbeiro?.avatar_url ? (
@@ -2323,19 +2323,19 @@ const Dashboard: React.FC = () => {
                                     )}
                                   </div>
                                   <span className="font-semibold capitalize text-gray-900">{b.service}</span>
-                                  <span className={`inline-flex items-center gap-1 text-xs rounded-full px-2 py-0.5 capitalize ${
-                                    b.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
-                                    b.status === 'confirmado' ? 'bg-green-100 text-green-800' :
-                                    b.status === 'cancelado' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-                                  }`}>
-                                    <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                      {b.status === 'pendente' && <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 8V6a1 1 0 10-2 0v5a1 1 0 00.293.707l3 3a1 1 0 101.414-1.414L11 10z"/>}
-                                      {b.status === 'confirmado' && <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293A1 1 0 006.293 10.707l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>}
-                                      {b.status === 'cancelado' && <path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>}
-                                      {b.status === 'finalizado' && <path d="M10 18a8 8 0 100-16 8 8 0 000 16z"/>}
-                                    </svg>
-                                    {b.status}
-                                  </span>
+                                  {myBookingsTab === 'proximos' && (
+                                    <span className={`inline-flex items-center gap-1 text-xs rounded-full px-2 py-0.5 capitalize ${
+                                      b.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
+                                      b.status === 'confirmado' ? 'bg-green-100 text-green-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                        {b.status === 'pendente' && <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 8V6a1 1 0 10-2 0v5a1 1 0 00.293.707l3 3a1 1 0 101.414-1.414L11 10z"/>}
+                                        {b.status === 'confirmado' && <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293A1 1 0 006.293 10.707l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>}
+                                      </svg>
+                                      {b.status}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="text-sm text-gray-600 flex items-center gap-2">
                                   <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M6 2a1 1 0 000 2h8a1 1 0 100-2H6zM4 7a2 2 0 012-2h8a2 2 0 012 2v7a3 3 0 01-3 3H7a3 3 0 01-3-3V7z"/></svg>
