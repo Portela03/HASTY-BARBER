@@ -345,6 +345,8 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Função mantida para uso futuro
+  // @ts-ignore - função será utilizada posteriormente
   const handleOpenMyBookings = async (tab: 'proximos' | 'historico') => {
     setMyBookingsTab(tab);
     setShowMyBookings(true);
