@@ -1,13 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import { barbershopService, barberService, serviceService, bookingService } from '../services/api';
 import type { Barbearia, Barbeiro, ServiceItem, BookingForm } from '../types';
-import { timeToMinutes, isValidTimeHHMM } from '../utils/validation';
+import { isValidTimeHHMM } from '../utils/validation';
 
 const BookingService: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedBarbershopId, setSelectedBarbershopId] = useState<number | ''>('');
   const [barbershops, setBarbershops] = useState<Barbearia[]>([]);
@@ -70,6 +69,7 @@ const BookingService: React.FC = () => {
     try {
       const services = await serviceService.listByBarbershop(id);
       setAvailableServices(services || []);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setServicesError(err?.response?.data?.message || err?.message || 'Erro ao carregar serviços.');
     } finally {
