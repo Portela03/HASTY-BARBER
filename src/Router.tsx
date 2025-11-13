@@ -8,6 +8,9 @@ import Dashboard from './components/Dashboard';
 import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
 import BarbershopConfig from './components/BarbershopConfig';
+import BookingService from './components/BookingService';
+import MyAppointments from './components/MyAppointments';
+import AppointmentHistory from './components/AppointmentHistory';
 
 const AppRouter: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -65,6 +68,23 @@ const AppRouter: React.FC = () => {
             path="*" 
             element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} 
           />
+
+          <Route 
+            path="/booking" 
+            element={isAuthenticated ? <BookingService /> : <Navigate to="/login" replace />}
+          />
+
+          <Route 
+            path="/my-appointments" 
+            element={isAuthenticated ? <MyAppointments /> : <Navigate to="/login" replace />}
+          />
+
+          <Route 
+            path="/appointment-history" 
+            element={isAuthenticated ? <AppointmentHistory /> : <Navigate to="/login" replace />}
+          />
+
+
         </Routes>
       </Layout>
     </BrowserRouter>
