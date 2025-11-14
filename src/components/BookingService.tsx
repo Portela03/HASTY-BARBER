@@ -119,17 +119,29 @@ const BookingService: React.FC = () => {
     }
 
     setIsSubmitting(true);
+    
+    const payload = {
+      id_barbearia: Number(selectedBarbershopId),
+      service: booking.service,
+      date: booking.date,
+      time: booking.time,
+      barber_id: Number(booking.barber_id),
+      notes: booking.notes || undefined,
+    };
+    
+    console.log('[FRONTEND] Tentando criar agendamento:', payload);
+    
     try {
-      await bookingService.create({
-        id_barbearia: Number(selectedBarbershopId),
-        service: booking.service,
-        date: booking.date,
-        time: booking.time,
-        barber_id: Number(booking.barber_id),
-        notes: booking.notes || undefined,
-      });
+      const result = await bookingService.create(payload);
+      console.log('[FRONTEND] Agendamento criado com sucesso:', result);
       setShowSuccessModal(true);
     } catch (err: any) {
+      console.error('[FRONTEND] Erro ao criar agendamento:', err);
+      console.error('[FRONTEND] Response completa:', err?.response);
+      console.error('[FRONTEND] Response data:', err?.response?.data);
+      console.error('[FRONTEND] Status HTTP:', err?.response?.status);
+      console.error('[FRONTEND] Payload enviado:', payload);
+      
       const msg = err?.response?.data?.message || err?.message || 'Erro ao criar agendamento.';
       showError(msg);
     } finally {

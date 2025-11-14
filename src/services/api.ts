@@ -36,17 +36,44 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
+  // Log detalhado para debug em produção
+  console.log(`[API REQUEST] ${config.method?.toUpperCase()} ${config.url}`, {
+    baseURL: config.baseURL,
+    data: config.data,
+    params: config.params,
+    hasToken: !!token
+  });
+  
   return config;
 });
 
 // Basic response error normalization
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // Log sucesso em produção
+    console.log(`[API SUCCESS] ${res.config.method?.toUpperCase()} ${res.config.url}`, {
+      status: res.status,
+      dataLength: JSON.stringify(res.data).length
+    });
+    return res;
+  },
   (error) => {
     const status = error?.response?.status as number | undefined;
     const backendMessage = error?.response?.data?.message || error?.response?.data?.error || error?.message;
-    // Network / connection errors (no response) -> show helpful message
     const noResponse = !error?.response;
+    
+    // Log detalhado do erro
+    console.error(`[API ERROR] ${error?.config?.method?.toUpperCase()} ${error?.config?.url}`, {
+      status,
+      statusText: error?.response?.statusText,
+      backendMessage,
+      responseData: error?.response?.data,
+      noResponse,
+      requestData: error?.config?.data,
+      baseURL: error?.config?.baseURL
+    });
+    
     // Preserve axios error shape but improve message
     error.message = noResponse
       ? `Não foi possível conectar ao servidor de API em ${BASE_URL}. Verifique se o backend está em execução.`

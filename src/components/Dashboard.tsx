@@ -1091,19 +1091,32 @@ const Dashboard: React.FC = () => {
     }
     setCreatingService(true);
     setCreateServiceError(null);
+    
+    const payload = {
+      nome,
+      preco,
+      descricao: serviceForm.descricao.trim() || undefined,
+    };
+    
+    console.log('[FRONTEND] Tentando cadastrar serviço:', payload, 'na barbearia:', selectedShopId);
+    
     try {
-      await serviceService.create(Number(selectedShopId), {
-        nome,
-        preco,
-        descricao: serviceForm.descricao.trim() || undefined,
-      });
+      const result = await serviceService.create(Number(selectedShopId), payload);
+      console.log('[FRONTEND] Serviço cadastrado com sucesso:', result);
       setServiceForm({ nome: '', preco: '', descricao: '' });
       setServicesTab('gerenciar');
       await loadServices(Number(selectedShopId));
       success('Serviço cadastrado com sucesso.');
     } catch (err: any) {
+      console.error('[FRONTEND] Erro ao cadastrar serviço:', err);
+      console.error('[FRONTEND] Response completa:', err?.response);
+      console.error('[FRONTEND] Response data:', err?.response?.data);
+      console.error('[FRONTEND] Status HTTP:', err?.response?.status);
+      console.error('[FRONTEND] Payload enviado:', payload);
+      
       const msg = err?.response?.data?.message || err?.message || 'Erro ao cadastrar serviço.';
       setCreateServiceError(msg);
+      showError(msg);
     } finally {
       setCreatingService(false);
     }
@@ -1232,24 +1245,34 @@ const Dashboard: React.FC = () => {
     }
     setCreateBarberLoading(true);
     setCreateBarberError(null);
+    
+    const payload = {
+      id_barbearia: Number(selectedShopId),
+      nome: barberForm.nome,
+      email: barberForm.email,
+      telefone: barberForm.telefone.replace(/\D/g, ''),
+      senha: barberForm.senha,
+      especialidades: (barberForm.especialidades && barberForm.especialidades.length > 0)
+        ? barberForm.especialidades.join(', ')
+        : undefined,
+    };
+    
+    console.log('[FRONTEND] Tentando cadastrar barbeiro:', payload);
+    
     try {
-      await barberService.create({
-        id_barbearia: Number(selectedShopId),
-        nome: barberForm.nome,
-        email: barberForm.email,
-        telefone: barberForm.telefone.replace(/\D/g, ''),
-        senha: barberForm.senha,
-        especialidades: (barberForm.especialidades && barberForm.especialidades.length > 0)
-          ? barberForm.especialidades.join(', ')
-          : undefined,
-      });
+      const result = await barberService.create(payload);
+      console.log('[FRONTEND] Barbeiro cadastrado com sucesso:', result);
       setBarberForm({ nome: '', email: '', telefone: '', senha: '', confirmarSenha: '', especialidades: [] });
       setBarbersTab('gerenciar');
       await loadBarbers(Number(selectedShopId));
       setShowSuccessBarberModal(true);
     } catch (err: any) {
-      console.error('Erro ao cadastrar barbeiro:', err);
-      console.error('Response data:', err?.response?.data);
+      console.error('[FRONTEND] Erro ao cadastrar barbeiro:', err);
+      console.error('[FRONTEND] Response completa:', err?.response);
+      console.error('[FRONTEND] Response data:', err?.response?.data);
+      console.error('[FRONTEND] Status HTTP:', err?.response?.status);
+      console.error('[FRONTEND] Payload enviado:', payload);
+      
       const errorMsg = err?.response?.data?.message 
         || err?.response?.data?.error 
         || err?.message 
