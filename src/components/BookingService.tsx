@@ -85,7 +85,8 @@ const BookingService: React.FC = () => {
     const newServices = isSelected
       ? booking.service.filter((s) => s !== idStr)
       : [...booking.service, idStr];
-    setBooking({ ...booking, service: newServices });
+    // reset barber selection when services change to avoid incompatible barber
+    setBooking({ ...booking, service: newServices, barber_id: '' });
     
     const allServices = availableServices || [];
     const selectedServices = allServices.filter((s) => newServices.includes(String(s.id)));
@@ -120,9 +121,15 @@ const BookingService: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      // Convert selected service ids (string) to service names expected by backend
+      const svcNames = (availableServices || [])
+        .filter((s) => booking.service.includes(String(s.id)))
+        .map((s) => s.nome);
+      const payloadService = svcNames.length > 0 ? svcNames : booking.service;
+
       await bookingService.create({
         id_barbearia: Number(selectedBarbershopId),
-        service: booking.service,
+        service: payloadService,
         date: booking.date,
         time: booking.time,
         barber_id: Number(booking.barber_id),
@@ -380,49 +387,67 @@ const BookingService: React.FC = () => {
                   Nenhum barbeiro disponível.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {availableBarbers.map((barber) => (
-                    <label
-                      key={barber.id_barbeiro}
-                      className={`block bg-gray-700 rounded-lg p-4 border-2 cursor-pointer transition-all ${
-                        booking.barber_id === barber.id_barbeiro
-                          ? 'border-amber-500 bg-amber-500/10'
-                          : 'border-gray-600 hover:border-gray-500'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="barber"
-                        checked={booking.barber_id === barber.id_barbeiro}
-                        onChange={() => setBooking({ ...booking, barber_id: barber.id_barbeiro || 0 })}
-                          className="w-5 h-5 text-amber-500 bg-gray-600 border-gray-500 focus:ring-amber-500 focus:ring-2"
-                        />
-                        <div className="flex items-center gap-3 flex-1">
-                          {barber.avatar_url ? (
-                            <img
-                              src={barber.avatar_url}
-                              alt={barber.nome}
-                              className="w-12 h-12 rounded-full object-cover"
+                (() => {
+                  // derive selected service names from availableServices + booking.service (ids)
+                  const selectedServiceNames = (availableServices || [])
+                    .filter((s) => booking.service.includes(String(s.id)))
+                    .map((s) => s.nome || '')
+                    .filter(Boolean);
+                  const filteredBarbers = selectedServiceNames.length > 0
+                    ? (availableBarbers || []).filter((b) => {
+                        const specs = new Set(
+                          (b.especialidades || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)
+                        );
+                        return selectedServiceNames.map((n) => n.trim().toLowerCase()).every((n) => specs.has(n));
+                      })
+                    : (availableBarbers || []);
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {filteredBarbers.map((barber) => (
+                        <label
+                          key={barber.id_barbeiro}
+                          className={`block bg-gray-700 rounded-lg p-4 border-2 cursor-pointer transition-all ${
+                            booking.barber_id === barber.id_barbeiro
+                              ? 'border-amber-500 bg-amber-500/10'
+                              : 'border-gray-600 hover:border-gray-500'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="radio"
+                              name="barber"
+                              checked={booking.barber_id === barber.id_barbeiro}
+                              onChange={() => setBooking({ ...booking, barber_id: barber.id_barbeiro || 0 })}
+                              className="w-5 h-5 text-amber-500 bg-gray-600 border-gray-500 focus:ring-amber-500 focus:ring-2"
                             />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-white font-bold">
-                              {barber.nome.charAt(0).toUpperCase()}
+                            <div className="flex items-center gap-3 flex-1">
+                              {barber.avatar_url ? (
+                                <img
+                                  src={barber.avatar_url}
+                                  alt={barber.nome}
+                                  className="w-12 h-12 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-white font-bold">
+                                  {barber.nome.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-white truncate">{barber.nome}</p>
+                                {barber.especialidades && (
+                                  <p className="text-xs text-gray-400 truncate">
+                                    {barber.especialidades}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-white truncate">{barber.nome}</p>
-                            {barber.especialidades && (
-                              <p className="text-xs text-gray-400 truncate">
-                                {barber.especialidades}
-                              </p>
-                            )}
                           </div>
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
+                        </label>
+                      ))}
+                    </div>
+                  );
+                })()
               )}
             </div>
 
