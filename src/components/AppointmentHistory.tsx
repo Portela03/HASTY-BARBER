@@ -240,13 +240,11 @@ const AppointmentHistory: React.FC = () => {
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                     {/* Main Info */}
                     <div className="flex-1">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          {getStatusBadge(booking.status)}
-                          <h3 className="text-xl font-bold text-white mt-2">
-                            {booking.service}
-                          </h3>
-                        </div>
+                      <div className="mb-6">
+                        {getStatusBadge(booking.status)}
+                        <h3 className="text-xl font-bold text-white mt-2">
+                          {booking.service}
+                        </h3>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
