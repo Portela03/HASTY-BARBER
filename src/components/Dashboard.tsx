@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
+import Toast from './Toast';
 import type { BookingForm, BookingRequest, BookingResponse, Barbearia, Barbeiro, User } from '../types';
 import { bookingService, barbershopService, barberService, uploadService, evaluationService, rescheduleService, serviceService, userService, clearFinalizadosGlobal, clearFinalizadosBarbearia, clearFinalizadosBarbeiro, getBarbeariaConfig } from '../services/api';
 import { timeToMinutes, isValidTimeHHMM } from '../utils/validation';
@@ -10,6 +12,7 @@ import type { ReviewTarget } from '../types';
 const Dashboard: React.FC = () => {
   const { user, token, login, logout } = useAuth();
   const navigate = useNavigate();
+  const { toasts, removeToast, success, error: showError, warning, info } = useToast();
 
   // Booking panel state
   const [showBooking, setShowBooking] = useState(false);
@@ -95,6 +98,16 @@ const Dashboard: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   // removed showInactive toggle per request
   const [uploadingUserAvatar, setUploadingUserAvatar] = useState(false);
+  
+  // Modal states for custom confirmations and success messages
+  const [showSuccessBarberModal, setShowSuccessBarberModal] = useState(false);
+  const [showDeleteBarberModal, setShowDeleteBarberModal] = useState(false);
+  const [barberToDelete, setBarberToDelete] = useState<number | null>(null);
+  const [showDeleteServiceModal, setShowDeleteServiceModal] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<{ id: number; nome: string } | null>(null);
+  const [showConfirmBookingModal, setShowConfirmBookingModal] = useState(false);
+  const [showCancelBookingModal, setShowCancelBookingModal] = useState(false);
+  const [bookingToCancelShop, setBookingToCancelShop] = useState<number | null>(null);
   const fileInputUserRef = React.useRef<HTMLInputElement | null>(null);
   // Profile modal
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -176,7 +189,7 @@ const Dashboard: React.FC = () => {
       } catch {}
     }
     if (!shopId) {
-      alert('Nenhuma barbearia encontrada para editar.');
+      showError('Nenhuma barbearia encontrada para editar.');
       return;
     }
     const shop = barbershops.find(b => b.id_barbearia === shopId);
@@ -189,9 +202,9 @@ const Dashboard: React.FC = () => {
     setShowBarbershopModal(true);
   };
   const handleSaveBarbershop = async () => {
-    if (!selectedShopId) { alert('Nenhuma barbearia selecionada.'); return; }
+    if (!selectedShopId) { warning('Nenhuma barbearia selecionada.'); return; }
     const nome = bsNome.trim();
-    if (nome.length < 2) { alert('Informe um nome válido para a barbearia.'); return; }
+    if (nome.length < 2) { warning('Informe um nome válido para a barbearia.'); return; }
     setIsUpdatingBarbershop(true);
     try {
       const telDigits = onlyDigits(bsTelefone);
@@ -204,10 +217,10 @@ const Dashboard: React.FC = () => {
       // Atualiza lista local de barbearias
       setBarbershops(prev => (prev || []).map(b => b.id_barbearia === updated.id_barbearia ? updated : b));
       setShowBarbershopModal(false);
-      alert('Dados da barbearia atualizados.');
+      success('Dados da barbearia atualizados.');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Erro ao atualizar barbearia.';
-      alert(msg);
+      showError(msg);
     } finally {
       setIsUpdatingBarbershop(false);
     }
@@ -216,8 +229,8 @@ const Dashboard: React.FC = () => {
     if (!user) return;
     const nome = profileNome.trim();
     const email = profileEmail.trim();
-    if (nome.length < 2) { alert('Informe um nome válido.'); return; }
-    if (!emailRegex.test(email)) { alert('Informe um email válido.'); return; }
+    if (nome.length < 2) { warning('Informe um nome válido.'); return; }
+    if (!emailRegex.test(email)) { warning('Informe um email válido.'); return; }
     setIsUpdatingProfile(true);
     try {
       const telDigits = onlyDigits(profileTelefone);
@@ -229,7 +242,7 @@ const Dashboard: React.FC = () => {
         login(token, merged);
       }
       setShowProfileModal(false);
-      alert('Dados atualizados.');
+      success('Dados atualizados.');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Erro ao atualizar dados.';
       alert(msg);
@@ -269,7 +282,7 @@ const Dashboard: React.FC = () => {
         }
 
         if (!id_barbeiro) {
-          alert('Não foi possível identificar seu cadastro de barbeiro para atualizar a foto.');
+          showError('Não foi possível identificar seu cadastro de barbeiro para atualizar a foto.');
           return;
         }
 
@@ -302,7 +315,7 @@ const Dashboard: React.FC = () => {
               : bk
           ));
         });
-        alert('Foto atualizada.');
+        success('Foto atualizada.');
       } else {
         // Cliente (ou outros tipos suportados): atualiza avatar do usuário
         const res = await uploadService.uploadUserAvatar(file);
@@ -320,10 +333,10 @@ const Dashboard: React.FC = () => {
               : bk
           ));
         });
-        alert('Foto atualizada.');
+        success('Foto atualizada.');
       }
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Falha ao enviar foto.');
+      showError(err?.response?.data?.message || err?.message || 'Falha ao enviar foto.');
     } finally {
       setUploadingUserAvatar(false);
       if (fileInputUserRef.current) fileInputUserRef.current.value = '';
@@ -365,17 +378,25 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleCancelBooking = async (id: number) => {
-    if (!window.confirm('Deseja cancelar este agendamento?')) return;
-    setCancellingId(id);
+  const openCancelBookingModal = (id: number) => {
+    setBookingToCancelShop(id);
+    setShowCancelBookingModal(true);
+  };
+
+  const executeCancelBooking = async () => {
+    if (!bookingToCancelShop) return;
+    setShowCancelBookingModal(false);
+    setCancellingId(bookingToCancelShop);
     try {
-      await bookingService.cancel(id);
+      await bookingService.cancel(bookingToCancelShop);
       await loadBookings();
+      success('Agendamento cancelado com sucesso!');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Erro ao cancelar agendamento.';
-      alert(msg);
+      showError(msg);
     } finally {
       setCancellingId(null);
+      setBookingToCancelShop(null);
     }
   };
 
@@ -497,8 +518,9 @@ const Dashboard: React.FC = () => {
     try {
       await bookingService.confirm(id);
       if (selectedShopId) await loadShopBookings(Number(selectedShopId));
+      setShowConfirmBookingModal(true);
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Erro ao confirmar.');
+      showError(err?.response?.data?.message || err?.message || 'Erro ao confirmar.');
     } finally {
       setShopConfirmingId(null);
     }
@@ -606,22 +628,30 @@ const Dashboard: React.FC = () => {
       await bookingService.finalize(id);
       if (selectedShopId) await loadShopBookings(Number(selectedShopId));
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Erro ao finalizar.');
+      showError(err?.response?.data?.message || err?.message || 'Erro ao finalizar.');
     } finally {
       setShopFinalizingId(null);
     }
   };
 
   const handleShopCancel = async (id: number) => {
-    if (!window.confirm('Deseja cancelar este agendamento?')) return;
-    setShopCancellingId(id);
+    setBookingToCancelShop(id);
+    setShowCancelBookingModal(true);
+  };
+
+  const executeShopCancel = async () => {
+    if (!bookingToCancelShop) return;
+    setShowCancelBookingModal(false);
+    setShopCancellingId(bookingToCancelShop);
     try {
-      await bookingService.cancel(id);
+      await bookingService.cancel(bookingToCancelShop);
       if (selectedShopId) await loadShopBookings(Number(selectedShopId));
+      success('Agendamento cancelado com sucesso!');
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Erro ao cancelar.');
+      showError(err?.response?.data?.message || err?.message || 'Erro ao cancelar.');
     } finally {
       setShopCancellingId(null);
+      setBookingToCancelShop(null);
     }
   };
 
@@ -633,10 +663,10 @@ const Dashboard: React.FC = () => {
         await loadShopBookings(Number(selectedShopId));
         await loadRescheduleRequests(Number(selectedShopId));
       }
-      alert('Pedido aprovado.');
+      success('Pedido aprovado.');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Erro ao aprovar pedido.';
-      alert(msg);
+      showError(msg);
     } finally {
       setRescheduleActionId(null);
     }
@@ -650,7 +680,7 @@ const Dashboard: React.FC = () => {
         await loadShopBookings(Number(selectedShopId));
         await loadRescheduleRequests(Number(selectedShopId));
       }
-      alert('Pedido rejeitado.');
+      success('Pedido rejeitado.');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Erro ao rejeitar pedido.';
       alert(msg);
@@ -690,13 +720,13 @@ const Dashboard: React.FC = () => {
   const handleSubmitReschedule = async () => {
     if (!rescheduleBookingId) return;
     if (!rescheduleDate || !rescheduleTime) {
-      alert('Informe data e hora desejadas.');
+      warning('Informe data e hora desejadas.');
       return;
     }
     // Optional: block past date/time
     const dt = new Date(`${rescheduleDate}T${rescheduleTime}:00`);
     if (isFinite(dt.getTime()) && dt < new Date()) {
-      alert('Escolha um horário futuro.');
+      warning('Escolha um horário futuro.');
       return;
     }
     setIsSubmittingReschedule(true);
@@ -705,16 +735,16 @@ const Dashboard: React.FC = () => {
       if (rescheduleBarberId !== '') payload.barber_id = Number(rescheduleBarberId);
       await rescheduleService.create(rescheduleBookingId, payload);
       setShowRescheduleModal(false);
-      alert('Pedido de reagendamento enviado para aprovação.');
+      success('Pedido de reagendamento enviado para aprovação.');
     } catch (err: any) {
       const status = err?.response?.status;
       const serverMsg = err?.response?.data?.message;
       const msg = serverMsg || err?.message || 'Falha ao solicitar reagendamento.';
-      if (status === 409) alert('Já existe um pedido pendente para este agendamento.');
-      else if (status === 400) alert(msg);
-      else if (status === 403) alert(msg || 'Você não pode reagendar este agendamento.');
-      else if (status === 404) alert(serverMsg || 'Recurso de reagendamento não encontrado ou agendamento inexistente. Confirme o caminho da API e o ID.');
-      else alert(msg);
+      if (status === 409) showError('Já existe um pedido pendente para este agendamento.');
+      else if (status === 400) showError(msg);
+      else if (status === 403) showError(msg || 'Você não pode reagendar este agendamento.');
+      else if (status === 404) showError(serverMsg || 'Recurso de reagendamento não encontrado ou agendamento inexistente. Confirme o caminho da API e o ID.');
+      else showError(msg);
     } finally {
       setIsSubmittingReschedule(false);
     }
@@ -788,12 +818,12 @@ const Dashboard: React.FC = () => {
   const handleSubmitReview = async () => {
     if (!reviewBookingId) return;
     if (reviewRating < 1 || reviewRating > 5) {
-      alert('Escolha uma nota de 1 a 5 estrelas.');
+      warning('Escolha uma nota de 1 a 5 estrelas.');
       return;
     }
     const comentario = reviewComment.trim();
     if (comentario.length > 1000) {
-      alert('Comentário muito longo (máx. 1000 caracteres).');
+      warning('Comentário muito longo (máx. 1000 caracteres).');
       return;
     }
     setIsSubmittingReview(true);
@@ -802,7 +832,7 @@ const Dashboard: React.FC = () => {
       // Mark as evaluated for the chosen target
       setEvaluatedKeys(prev => new Set([...Array.from(prev), `${reviewBookingId}:${reviewTarget}`]));
       setShowReviewModal(false);
-      alert('Avaliação enviada. Obrigado!');
+      success('Avaliação enviada. Obrigado!');
     } catch (err: any) {
       const status = err?.response?.status;
       const msg = err?.response?.data?.message || err?.message || 'Falha ao enviar avaliação.';
@@ -810,15 +840,15 @@ const Dashboard: React.FC = () => {
         // Já existe avaliação para esse booking/target — trata amigável e marca localmente
         setEvaluatedKeys(prev => new Set([...Array.from(prev), `${reviewBookingId}:${reviewTarget}`]));
         setShowReviewModal(false);
-        alert('Você já avaliou este destino para este agendamento.');
+        info('Você já avaliou este destino para este agendamento.');
       } else if (status === 400) {
-        alert('Agendamento ainda não finalizado. Tente novamente quando estiver finalizado.');
+        warning('Agendamento ainda não finalizado. Tente novamente quando estiver finalizado.');
       } else if (status === 403) {
-        alert('Você não pode avaliar este agendamento.');
+        showError('Você não pode avaliar este agendamento.');
       } else if (status === 404) {
-        alert('Agendamento não encontrado para avaliação.');
+        showError('Agendamento não encontrado para avaliação.');
       } else {
-        alert(msg);
+        showError(msg);
       }
     } finally {
       setIsSubmittingReview(false);
@@ -847,7 +877,7 @@ const Dashboard: React.FC = () => {
       setHiddenFinalizedIds(new Set());
       if (selectedShopId) await loadShopBookings(Number(selectedShopId));
     } catch (e: any) {
-      alert(e?.message || 'Falha ao aplicar limpeza de finalizados.');
+      showError(e?.message || 'Falha ao aplicar limpeza de finalizados.');
     }
   };
 
@@ -1052,11 +1082,11 @@ const Dashboard: React.FC = () => {
     const nome = serviceForm.nome.trim();
     const preco = serviceForm.preco.trim();
     if (nome.length < 2) {
-      alert('Informe um nome válido para o serviço (mínimo 2 caracteres).');
+      warning('Informe um nome válido para o serviço (mínimo 2 caracteres).');
       return;
     }
     if (!preco) {
-      alert('Informe um preço (apenas visual).');
+      warning('Informe um preço (apenas visual).');
       return;
     }
     setCreatingService(true);
@@ -1070,7 +1100,7 @@ const Dashboard: React.FC = () => {
       setServiceForm({ nome: '', preco: '', descricao: '' });
       setServicesTab('gerenciar');
       await loadServices(Number(selectedShopId));
-      alert('Serviço cadastrado com sucesso.');
+      success('Serviço cadastrado com sucesso.');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Erro ao cadastrar serviço.';
       setCreateServiceError(msg);
@@ -1081,7 +1111,7 @@ const Dashboard: React.FC = () => {
 
   const handleToggleBarber = async (id_barbeiro: number, nextAtivo: boolean) => {
     if (user?.tipo_usuario !== 'proprietario') {
-      alert('Apenas o proprietário pode alterar o status de barbeiros.');
+      warning('Apenas o proprietário pode alterar o status de barbeiros.');
       return;
     }
     if (!barbers) return;
@@ -1091,7 +1121,7 @@ const Dashboard: React.FC = () => {
     const idx = prev.findIndex((b: any) => (b?.id_barbeiro) === id_barbeiro);
     if (idx === -1) {
       setTogglingBarberId(null);
-      alert('Barbeiro não encontrado na lista.');
+      showError('Barbeiro não encontrado na lista.');
       return;
     }
     const next = prev.map((b: any) => (
@@ -1101,25 +1131,25 @@ const Dashboard: React.FC = () => {
     try {
       await barberService.setActive(id_barbeiro, nextAtivo);
       // sucesso: manter estado otimista
-      alert('Status atualizado.');
+      success('Status atualizado.');
     } catch (err: any) {
       // revert
       setBarbers(prev as any);
       const status = err?.response?.status;
       const msg = err?.response?.data?.message || err?.message || 'Erro ao atualizar barbeiro.';
       if (status === 401) {
-        alert(msg || 'Sessão expirada. Faça login novamente.');
+        showError(msg || 'Sessão expirada. Faça login novamente.');
         await logout();
         navigate('/login');
       } else if (status === 403) {
-        alert('Acesso negado. Apenas o proprietário pode alterar o status.');
+        showError('Acesso negado. Apenas o proprietário pode alterar o status.');
       } else if (status === 404) {
-        alert('Barbeiro não encontrado. A lista será recarregada.');
+        showError('Barbeiro não encontrado. A lista será recarregada.');
         if (selectedShopId) await loadBarbers(Number(selectedShopId));
       } else if (status === 400) {
-        alert(msg || 'Payload inválido.');
+        showError(msg || 'Payload inválido.');
       } else {
-        alert(msg || 'Erro interno. Tente novamente.');
+        showError(msg || 'Erro interno. Tente novamente.');
       }
     } finally {
       setTogglingBarberId(null);
@@ -1127,35 +1157,69 @@ const Dashboard: React.FC = () => {
   };
 
   // Delete (soft-delete) a barber: set ativo = false and remove from the visible list
-  const handleDeleteBarber = async (id_barbeiro: number) => {
+  const openDeleteBarberModal = (id_barbeiro: number) => {
     if (user?.tipo_usuario !== 'proprietario') {
-      alert('Apenas o proprietário pode excluir barbeiros.');
+      warning('Apenas o proprietário pode excluir barbeiros.');
       return;
     }
-  if (!window.confirm('Deseja realmente excluir este barbeiro?')) return;
-    setTogglingBarberId(id_barbeiro);
+    setBarberToDelete(id_barbeiro);
+    setShowDeleteBarberModal(true);
+  };
+
+  const executeDeleteBarber = async () => {
+    if (!barberToDelete) return;
+    setShowDeleteBarberModal(false);
+    setTogglingBarberId(barberToDelete);
     try {
-      await barberService.setActive(id_barbeiro, false);
+      await barberService.setActive(barberToDelete, false);
       // remove from list so UI doesn't immediately show an "Ativar" button
-      setBarbers((prev) => (prev || []).filter((b: any) => Number(b?.id_barbeiro) !== Number(id_barbeiro)));
-      alert('Barbeiro excluído.');
+      setBarbers((prev) => (prev || []).filter((b: any) => Number(b?.id_barbeiro) !== Number(barberToDelete)));
+      success('Barbeiro excluído com sucesso!');
     } catch (err: any) {
       const status = err?.response?.status;
       const msg = err?.response?.data?.message || err?.message || 'Erro ao excluir barbeiro.';
       if (status === 401) {
-        alert(msg || 'Sessão expirada. Faça login novamente.');
+        showError(msg || 'Sessão expirada. Faça login novamente.');
         await logout();
         navigate('/login');
       } else if (status === 403) {
-        alert('Acesso negado. Apenas o proprietário pode excluir barbeiros.');
+        showError('Acesso negado. Apenas o proprietário pode excluir barbeiros.');
       } else if (status === 404) {
-        alert('Barbeiro não encontrado. A lista será recarregada.');
+        showError('Barbeiro não encontrado. A lista será recarregada.');
         if (selectedShopId) await loadBarbers(Number(selectedShopId));
       } else {
-        alert(msg || 'Erro interno. Tente novamente.');
+        showError(msg || 'Erro interno. Tente novamente.');
       }
     } finally {
       setTogglingBarberId(null);
+      setBarberToDelete(null);
+    }
+  };
+
+  // Service deletion handlers
+  const openDeleteServiceModal = (serviceId: number, serviceName: string) => {
+    if (!selectedShopId) {
+      warning('Selecione uma barbearia.');
+      return;
+    }
+    setServiceToDelete({ id: serviceId, nome: serviceName });
+    setShowDeleteServiceModal(true);
+  };
+
+  const executeDeleteService = async () => {
+    if (!serviceToDelete || !selectedShopId) return;
+    setShowDeleteServiceModal(false);
+    setDeletingServiceId(serviceToDelete.id);
+    try {
+      await serviceService.delete(Number(selectedShopId), serviceToDelete.id);
+      await loadServices(Number(selectedShopId));
+      success('Serviço excluído com sucesso!');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Erro ao excluir serviço.';
+      showError(msg);
+    } finally {
+      setDeletingServiceId(null);
+      setServiceToDelete(null);
     }
   };
 
@@ -1182,9 +1246,16 @@ const Dashboard: React.FC = () => {
       setBarberForm({ nome: '', email: '', telefone: '', senha: '', confirmarSenha: '', especialidades: [] });
       setBarbersTab('gerenciar');
       await loadBarbers(Number(selectedShopId));
-      alert('Barbeiro cadastrado com sucesso.');
+      setShowSuccessBarberModal(true);
     } catch (err: any) {
-      setCreateBarberError(err?.response?.data?.message || err?.message || 'Erro ao cadastrar barbeiro.');
+      console.error('Erro ao cadastrar barbeiro:', err);
+      console.error('Response data:', err?.response?.data);
+      const errorMsg = err?.response?.data?.message 
+        || err?.response?.data?.error 
+        || err?.message 
+        || 'Erro ao cadastrar barbeiro.';
+      setCreateBarberError(errorMsg);
+      showError(errorMsg);
     } finally {
       setCreateBarberLoading(false);
     }
@@ -2362,7 +2433,7 @@ const Dashboard: React.FC = () => {
                                 {myBookingsTab === 'proximos' && (
                                   <div className="flex flex-col gap-2">
                                     <button
-                                      onClick={() => handleCancelBooking(b.id)}
+                                      onClick={() => openCancelBookingModal(b.id)}
                                       disabled={cancellingId === b.id}
                                       className={`inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium border ${cancellingId === b.id ? 'bg-white text-red-300 border-red-200 cursor-not-allowed' : 'bg-white text-red-700 border-red-300 hover:bg-red-50'}`}
                                     >
@@ -3070,22 +3141,7 @@ const Dashboard: React.FC = () => {
                                     {user.tipo_usuario === 'proprietario' && (
                                       <button
                                         type="button"
-                                        onClick={async () => {
-                                          if (!selectedShopId) { alert('Selecione uma barbearia.'); return; }
-                                          if (!window.confirm(`Deseja excluir o serviço "${s.nome}"? Esta ação não pode ser desfeita.`)) return;
-                                          try {
-                                            setDeletingServiceId(Number(s.id));
-                                            await serviceService.delete(Number(selectedShopId), Number(s.id));
-                                            // refresh list
-                                            await loadServices(Number(selectedShopId));
-                                            alert('Serviço excluído.');
-                                          } catch (err: any) {
-                                            const msg = err?.response?.data?.message || err?.message || 'Erro ao excluir serviço.';
-                                            alert(msg);
-                                          } finally {
-                                            setDeletingServiceId(null);
-                                          }
-                                        }}
+                                        onClick={() => openDeleteServiceModal(Number(s.id), s.nome)}
                                         disabled={deleting}
                                         className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium text-white ${deleting ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                       >
@@ -3334,7 +3390,7 @@ const Dashboard: React.FC = () => {
                                           if (!(barbeiro as any).id_barbeiro) return;
                                           const id = (barbeiro as any).id_barbeiro;
                                           if (barbeiro.ativo) {
-                                            handleDeleteBarber(id);
+                                            openDeleteBarberModal(id);
                                           } else {
                                             handleToggleBarber(id, true);
                                           }
@@ -3563,6 +3619,241 @@ const Dashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map((toast) => (
+          <Toast
+            key={toast.id}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => removeToast(toast.id)}
+          />
+        ))}
+      </div>
+
+      {/* Modal de Sucesso - Cadastro de Barbeiro */}
+      {showSuccessBarberModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-2xl p-8 max-w-md w-full border-2 border-green-500/30 shadow-2xl shadow-green-500/20 animate-[fadeInUp_0.3s_ease-out]">
+            {/* Ícone de Sucesso */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-green-600 to-emerald-700 rounded-full p-4">
+                  <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Título e Mensagem */}
+            <h3 className="text-2xl font-bold text-center mb-3 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+              Barbeiro Cadastrado!
+            </h3>
+            <p className="text-gray-300 text-center mb-8 leading-relaxed">
+              O barbeiro foi cadastrado com sucesso e já está disponível para atendimento.
+            </p>
+
+            {/* Botão */}
+            <button
+              onClick={() => setShowSuccessBarberModal(false)}
+              className="group relative w-full bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-green-500/50 hover:-translate-y-0.5 overflow-hidden"
+            >
+              <span className="relative z-10">Entendido!</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação - Excluir Barbeiro */}
+      {showDeleteBarberModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-2xl p-8 max-w-md w-full border-2 border-red-500/30 shadow-2xl shadow-red-500/20 animate-[fadeInUp_0.3s_ease-out]">
+            {/* Ícone de Aviso */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-red-600 to-red-700 rounded-full p-4">
+                  <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Título e Mensagem */}
+            <h3 className="text-2xl font-bold text-center mb-3 bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">
+              Excluir Barbeiro?
+            </h3>
+            <p className="text-gray-300 text-center mb-8 leading-relaxed">
+              Tem certeza que deseja excluir este barbeiro? Esta ação não poderá ser desfeita.
+            </p>
+
+            {/* Botões */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteBarberModal(false);
+                  setBarberToDelete(null);
+                }}
+                className="flex-1 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={executeDeleteBarber}
+                className="group relative flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-red-500/50 hover:-translate-y-0.5 overflow-hidden"
+              >
+                <span className="relative z-10">Sim, excluir</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação - Excluir Serviço */}
+      {showDeleteServiceModal && serviceToDelete && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-2xl p-8 max-w-md w-full border-2 border-red-500/30 shadow-2xl shadow-red-500/20 animate-[fadeInUp_0.3s_ease-out]">
+            {/* Ícone de Aviso */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-red-600 to-red-700 rounded-full p-4">
+                  <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Título e Mensagem */}
+            <h3 className="text-2xl font-bold text-center mb-3 bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">
+              Excluir Serviço?
+            </h3>
+            <p className="text-gray-300 text-center mb-2 leading-relaxed">
+              Deseja excluir o serviço <span className="text-amber-400 font-semibold">"{serviceToDelete.nome}"</span>?
+            </p>
+            <p className="text-gray-400 text-center mb-8 text-sm">
+              Esta ação não pode ser desfeita.
+            </p>
+
+            {/* Botões */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteServiceModal(false);
+                  setServiceToDelete(null);
+                }}
+                className="flex-1 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={executeDeleteService}
+                className="group relative flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-red-500/50 hover:-translate-y-0.5 overflow-hidden"
+              >
+                <span className="relative z-10">Sim, excluir</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Sucesso - Confirmar Agendamento */}
+      {showConfirmBookingModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-2xl p-8 max-w-md w-full border-2 border-green-500/30 shadow-2xl shadow-green-500/20 animate-[fadeInUp_0.3s_ease-out]">
+            {/* Ícone de Sucesso */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-green-600 to-emerald-700 rounded-full p-4">
+                  <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Título e Mensagem */}
+            <h3 className="text-2xl font-bold text-center mb-3 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+              Agendamento Confirmado!
+            </h3>
+            <p className="text-gray-300 text-center mb-8 leading-relaxed">
+              O agendamento foi confirmado com sucesso. O cliente será notificado.
+            </p>
+
+            {/* Botão */}
+            <button
+              onClick={() => setShowConfirmBookingModal(false)}
+              className="group relative w-full bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-green-500/50 hover:-translate-y-0.5 overflow-hidden"
+            >
+              <span className="relative z-10">Entendido!</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação - Cancelar Agendamento */}
+      {showCancelBookingModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-2xl p-8 max-w-md w-full border-2 border-red-500/30 shadow-2xl shadow-red-500/20 animate-[fadeInUp_0.3s_ease-out]">
+            {/* Ícone de Aviso */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-red-600 to-red-700 rounded-full p-4">
+                  <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Título e Mensagem */}
+            <h3 className="text-2xl font-bold text-center mb-3 bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">
+              Cancelar Agendamento?
+            </h3>
+            <p className="text-gray-300 text-center mb-8 leading-relaxed">
+              Tem certeza que deseja cancelar este agendamento? O cliente será notificado sobre o cancelamento.
+            </p>
+
+            {/* Botões */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCancelBookingModal(false);
+                  setBookingToCancelShop(null);
+                }}
+                className="flex-1 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+              >
+                Não, manter
+              </button>
+              <button
+                onClick={() => {
+                  // Determina qual função chamar baseado no contexto
+                  if (showMyBookings) {
+                    executeCancelBooking();
+                  } else {
+                    executeShopCancel();
+                  }
+                }}
+                className="group relative flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-red-500/50 hover:-translate-y-0.5 overflow-hidden"
+              >
+                <span className="relative z-10">Sim, cancelar</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
