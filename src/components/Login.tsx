@@ -44,25 +44,26 @@ const Login: React.FC = () => {
   };
  
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex login-screen">
       {/* Lado esquerdo - imagem e texto */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-gray-800 to-gray-900">
+      <div className="hidden lg:flex lg:w-1/2 relative login-left">
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-40"
+          className="absolute inset-0 bg-cover bg-center login-left-image"
           style={{
             backgroundImage:
               "url('https://images.unsplash.com/photo-1503951914875-452162b0f3f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80')",
-          }}
+            filter: 'brightness(1)'
+            }}
         />
-        <div className="relative z-10 flex flex-col justify-center px-12 text-white">
+        <div className="relative z-10 flex flex-col justify-center px-12 text-white login-left-content">
           <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-cyan-500 rounded-full mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-[#ffb400] rounded-full mb-6">
               <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
               </svg>
             </div>
             <h1 className="text-5xl font-bold mb-4">Hasty Barber</h1>
-            <p className="text-xl text-gray-300">
+            <p className="text-xl text-gray-200">
               Gerencie seus agendamentos com praticidade e eficiência.
             </p>
           </div>
@@ -120,11 +121,11 @@ const Login: React.FC = () => {
       </div>
  
       {/* Lado direito - formulário */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-md w-full space-y-8">
+      <div className="flex-1 flex items-center justify-center px-6 sm:px-8 lg:px-12 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+        <div className="max-w-md w-full space-y-8 login-right bg-gradient-to-br from-gray-900 via-gray-900 to-gray-900 border border-gray-700 rounded-2xl p-8 ">
           {/* Logo em telas pequenas */}
           <div className="lg:hidden text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-cyan-500 rounded-full mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-[#ffb400] rounded-full mb-4">
               <svg
                 className="w-8 h-8 text-white"
                 fill="currentColor"
@@ -133,14 +134,14 @@ const Login: React.FC = () => {
                 <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
               </svg>
             </div>
-            <h2 className="text-3xl font-bold text-gray-900">Hasty Barber</h2>
+            <h2 className="text-3xl font-bold text-white">Hasty Barber</h2>
           </div>
  
           <div>
-            <h2 className="text-center text-3xl font-extrabold text-gray-900">
+            <h2 className="text-center text-2xl font-extrabold text-white">
               Bem-vindo de volta
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
+            <p className="mt-2 text-center text-sm text-gray-300">
               Faça login para continuar
             </p>
           </div>
@@ -150,7 +151,7 @@ const Login: React.FC = () => {
               <div>
                 <label
                   htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-sm font-medium text-gray-200 mb-2"
                 >
                   E-mail
                 </label>
@@ -160,7 +161,7 @@ const Login: React.FC = () => {
                   type="email"
                   autoComplete="email"
                   required
-                  className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-150"
+                  className="appearance-none block w-full px-4 py-3 bg-[#0f1720] border border-[#23272b] rounded-lg shadow-sm placeholder-gray-400 text-white focus:outline-none focus:ring-0 transition duration-150"
                   placeholder="seu@email.com"
                   value={formData.email}
                   onChange={handleChange}
@@ -170,7 +171,7 @@ const Login: React.FC = () => {
               <div>
                 <label
                   htmlFor="senha"
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-sm font-medium text-gray-200 mb-2"
                 >
                   Senha
                 </label>
@@ -180,7 +181,7 @@ const Login: React.FC = () => {
                   type="password"
                   autoComplete="current-password"
                   required
-                  className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-150"
+                  className="appearance-none block w-full px-4 py-3 bg[#0f1720] bg-[#0f1720] border border-[#23272b] rounded-lg shadow-sm placeholder-gray-400 text-white focus:outline-none focus:ring-0 transition duration-150"
                   placeholder="••••••••"
                   value={formData.senha}
                   onChange={handleChange}
@@ -189,10 +190,10 @@ const Login: React.FC = () => {
             </div>
  
             {error && (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+              <div className="rounded-lg bg-red-900 border border-red-800 p-4">
                 <div className="flex">
                   <svg
-                    className="h-5 w-5 text-red-400"
+                    className="h-5 w-5 text-red-300"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -202,7 +203,7 @@ const Login: React.FC = () => {
                       clipRule="evenodd"
                     />
                   </svg>
-                  <p className="ml-3 text-sm text-red-700">{error}</p>
+                  <p className="ml-3 text-sm text-red-200">{error}</p>
                 </div>
               </div>
             )}
@@ -211,7 +212,7 @@ const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="group relative w-full flex justify-center py-3 px-4 border border-transparent rounded-lg text-white bg-cyan-500 hover:bg-cyan-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 font-semibold shadow-lg"
+                className="group relative w-full flex justify-center py-3 px-4 border border-transparent rounded-lg text-black bg-[#f6b21b] hover:bg-[#f5a71a] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 font-semibold shadow-lg"
               >
                 {isLoading ? (
                   <svg
@@ -243,18 +244,18 @@ const Login: React.FC = () => {
             <div className="flex items-center justify-between text-sm">
               <a
                 href="#"
-                className="font-medium text-cyan-600 hover:text-cyan-500"
+                className="font-medium text-[#ffb400] hover:text-[#ff8c00]"
               >
                 Esqueceu a senha?
               </a>
             </div>
  
-            <div className="text-center border-t border-gray-200 pt-6">
+            <div className="text-center border-t border-gray-700 pt-6">
               <p className="text-sm text-gray-600">
                 Não tem uma conta?{' '}
                 <a
                   href="/register/client"
-                  className="font-semibold text-cyan-600 hover:text-cyan-500"
+                  className="font-semibold text-[#ffb400] hover:text-[#ff8c00]"
                 >
                   Cadastre-se agora
                 </a>
