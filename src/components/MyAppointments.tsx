@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { bookingService, rescheduleService, barberService } from '../services/api';
+import { formatPhoneBR } from '../utils/phone';
 import type { BookingResponse, Barbeiro } from '../types';
 import { useToast } from '../hooks/useToast';
 import Toast from './Toast';
@@ -38,7 +39,34 @@ const MyAppointments: React.FC = () => {
       const upcoming = (data || []).filter(
         (b) => b.status !== 'finalizado' && b.status !== 'cancelado' && new Date(`${b.date}T${b.time}`) >= new Date()
       );
-      setBookings(upcoming);
+      // Enrich bookings with barber email when missing by fetching barbers for each barbershop
+      const shopIds = Array.from(new Set(upcoming.map((b) => b.id_barbearia).filter(Boolean))) as number[];
+      const barbersByShop: Record<number, Record<number, any>> = {};
+      await Promise.all(
+        shopIds.map(async (shopId) => {
+          try {
+            const barbers = await barberService.listByBarbershop(shopId, { onlyActive: false });
+            barbersByShop[shopId] = (barbers || []).reduce((acc: any, br: any) => {
+              if (br && (br.id_barbeiro ?? br.id_usuario)) acc[Number(br.id_barbeiro ?? br.id_usuario)] = br;
+              return acc;
+            }, {} as Record<number, any>);
+          } catch (err) {
+            // ignore per-shop failures
+          }
+        })
+      );
+
+      const enriched = (upcoming || []).map((b) => {
+        try {
+          const shopMap = b.id_barbearia ? barbersByShop[Number(b.id_barbearia)] : undefined;
+          const bid = b.barber_id ?? b.barbeiro?.id_barbeiro;
+          if (shopMap && bid && !((b.barbeiro as any)?.email) && shopMap[Number(bid)]) {
+            return { ...b, barbeiro: { ...b.barbeiro, ...(shopMap[Number(bid)] || {}) } };
+          }
+        } catch (e) {}
+        return b;
+      });
+      setBookings(enriched);
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Erro ao carregar agendamentos.';
       setLoadError(msg);
@@ -169,9 +197,9 @@ const MyAppointments: React.FC = () => {
               <span className="text-sm font-bold">Voltar ao Dashboard</span>
             </button>
             
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 mb-3 animate-[shimmer_3s_infinite]" style={{ backgroundSize: '200% auto' }}>
+                <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 mb-3 animate-[shimmer_3s_infinite]" style={{ backgroundSize: '200% auto' }}>
                   MEUS AGENDAMENTOS
                 </h1>
                 <p className="text-gray-300 text-base flex items-center gap-2">
@@ -182,12 +210,12 @@ const MyAppointments: React.FC = () => {
               <button
                 onClick={loadBookings}
                 disabled={isLoading}
-                className="group flex items-center gap-2 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white px-5 py-3 rounded-xl transition-all duration-300 disabled:opacity-50 shadow-lg hover:shadow-xl hover:-translate-y-1"
+                className="group w-full sm:w-auto flex items-center gap-2 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white px-4 py-2 md:px-5 md:py-3 rounded-xl transition-all duration-300 disabled:opacity-50 shadow-lg hover:shadow-xl hover:-translate-y-1"
               >
                 <svg className={`w-5 h-5 transition-transform ${isLoading ? 'animate-spin' : 'group-hover:rotate-180'} duration-500`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span className="text-sm font-bold">Atualizar</span>
+                <span className="text-sm md:text-base font-bold">Atualizar</span>
               </button>
             </div>
           </div>
@@ -248,11 +276,11 @@ const MyAppointments: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
+                <div className="space-y-4">
               {bookings.map((booking, index) => (
                 <div
                   key={booking.id}
-                  className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 rounded-xl p-6 border border-gray-600 hover:border-amber-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/20 animate-[fadeInUp_0.5s_ease-out] hover:-translate-y-1"
+                  className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 rounded-xl p-4 md:p-6 border border-gray-600 hover:border-amber-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/20 animate-[fadeInUp_0.5s_ease-out] hover:-translate-y-1"
                   style={{ animationDelay: `${index * 0.1}s`, animationFillMode: 'backwards' }}
                 >
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -267,7 +295,7 @@ const MyAppointments: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm md:text-base">
                         {/* Date & Time */}
                         <div className="flex items-center gap-2 text-gray-300">
                           <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -285,11 +313,37 @@ const MyAppointments: React.FC = () => {
 
                         {/* Barber */}
                         {booking.barbeiro && (
-                          <div className="flex items-center gap-2 text-gray-300">
-                            <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            <span>{booking.barbeiro.nome}</span>
+                          <div className="flex items-center gap-3 text-gray-300">
+                            {booking.barbeiro.avatar_url ? (
+                              <img src={booking.barbeiro.avatar_url} alt={booking.barbeiro.nome} className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-white font-bold">
+                                {String(booking.barbeiro.nome || '').charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-sm md:text-base font-semibold text-white truncate">{booking.barbeiro.nome}</span>
+                              </div>
+                              <div className="text-xs md:text-sm text-gray-400 flex flex-col sm:flex-row sm:items-center sm:gap-3 mt-1">
+                                {booking.barbeiro.telefone && (
+                                  <span className="flex items-center gap-1">
+                                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    </svg>
+                                    <span>{formatPhoneBR(booking.barbeiro.telefone)}</span>
+                                  </span>
+                                )}
+                                {(booking.barbeiro as any)?.email && (
+                                  <span className="flex items-center gap-1 truncate">
+                                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m0 0v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8m18 0L12 13 3 8" />
+                                    </svg>
+                                    <span className="truncate">{(booking.barbeiro as any).email}</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         )}
 
@@ -315,11 +369,11 @@ const MyAppointments: React.FC = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex md:flex-col gap-2">
+                    <div className="flex flex-col sm:flex-row md:flex-col gap-2">
                       <button
                         onClick={() => handleOpenReschedule(booking)}
                         disabled={booking.status !== 'pendente' && booking.status !== 'confirmado'}
-                        className="group flex-1 md:flex-initial flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-gray-900 px-4 py-2 rounded-lg transition-all duration-300 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:shadow-amber-500/50 hover:-translate-y-0.5 relative overflow-hidden"
+                        className="group w-full sm:flex-1 md:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-gray-900 px-4 py-2 rounded-lg transition-all duration-300 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:shadow-amber-500/50 hover:-translate-y-0.5 relative overflow-hidden"
                       >
                         <svg className="w-4 h-4 transition-transform group-hover:rotate-180 duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -330,7 +384,7 @@ const MyAppointments: React.FC = () => {
                       <button
                         onClick={() => openCancelModal(booking.id)}
                         disabled={cancellingId === booking.id}
-                        className="group flex-1 md:flex-initial flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-4 py-2 rounded-lg transition-all duration-300 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:shadow-red-500/50 hover:-translate-y-0.5 relative overflow-hidden"
+                        className="group w-full sm:flex-1 md:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-4 py-2 rounded-lg transition-all duration-300 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:shadow-red-500/50 hover:-translate-y-0.5 relative overflow-hidden"
                       >
                         {cancellingId === booking.id ? (
                           <>
@@ -359,7 +413,7 @@ const MyAppointments: React.FC = () => {
       {showRescheduleModal && rescheduleBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="fixed inset-0 bg-black/60" onClick={() => setShowRescheduleModal(false)} aria-hidden />
-          <div className="relative z-50 w-full max-w-lg bg-gray-800 rounded-2xl shadow-2xl border border-gray-700">
+          <div className="relative z-50 w-full max-w-full sm:max-w-lg bg-gray-800 rounded-2xl shadow-2xl border border-gray-700">
             {/* Header */}
             <div className="bg-gradient-to-r from-amber-500 to-yellow-600 rounded-t-2xl p-6">
               <div className="flex items-center justify-between">
