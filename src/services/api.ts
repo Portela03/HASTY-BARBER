@@ -213,6 +213,78 @@ export const bookingService = {
       barbearia_nome: raw.barbearia_nome ?? raw.barbearia?.nome,
     }));
   },
+  // List bookings across barbearias for a specific barber (best-effort)
+  listByBarber: async (id_barbeiro: number): Promise<BookingResponse[]> => {
+    const results: BookingResponse[] = [];
+    // Try to get barbearias related to the user first, then fallback to all
+    let shops: any[] = [];
+    try { const res = await api.get('/api/barbearias/me'); shops = res.data || []; } catch { /* ignore */ }
+    if (!shops || shops.length === 0) {
+      try { const res = await api.get('/api/barbearias'); shops = res.data || []; } catch { /* ignore */ }
+    }
+    for (const s of shops || []) {
+      try {
+        const list = await listBarbeariaBookings(s.id_barbearia, { barber_id: id_barbeiro });
+        if (list && list.length) results.push(...list);
+      } catch {
+        // ignore individual failures
+      }
+    }
+    // Fallback: try a direct endpoint if backend exposes it
+    if (results.length === 0) {
+      try {
+        const resp = await api.get<any[]>(`/api/barbeiros/${id_barbeiro}/bookings`);
+        const data = resp.data || [];
+        // Try to normalize via the same mapping used elsewhere (simple form)
+        const mapStatus = (s: any): BookingResponse['status'] => {
+          const v = String(s || '').toLowerCase();
+          if (v === 'pending') return 'pendente';
+          if (v === 'confirmed') return 'confirmado';
+          if (v === 'cancelled') return 'cancelado';
+          if (v === 'finalized') return 'finalizado';
+          if (v === 'pendente' || v === 'confirmado' || v === 'cancelado' || v === 'finalizado') return v as any;
+          return 'pendente';
+        };
+        for (const raw of data || []) {
+          results.push({
+            id: raw.id,
+            id_barbearia: raw.id_barbearia ?? raw.barbearia_id ?? raw.idBarbearia ?? raw.barbershop_id ?? raw.barbearia?.id_barbearia,
+            service: raw.service,
+            date: raw.date,
+            time: raw.time,
+            barber_id: raw.barber_id ?? raw.id_barbeiro ?? raw.barbeiro?.id_barbeiro,
+            barbeiro: raw.barbeiro ?? (raw.barber_name || raw.barber)
+              ? {
+                  id_barbeiro: raw.barber_id ?? raw.id_barbeiro ?? raw.barbeiro?.id_barbeiro,
+                  nome: raw.barbeiro?.nome ?? raw.barber_name ?? raw.barber,
+                  telefone: raw.barbeiro?.telefone ?? raw.barber_phone,
+                  avatar_url: raw.barbeiro?.avatar_url ?? raw.barbeiro?.foto_perfil ?? raw.barber_avatar_url ?? raw.barber_avatar,
+                }
+              : undefined,
+            cliente: raw.cliente ? {
+              id_usuario: raw.cliente.id_usuario ?? raw.cliente.usuario_id ?? raw.cliente.id,
+              nome: raw.cliente.nome ?? raw.cliente.name,
+              email: raw.cliente.email,
+              telefone: raw.cliente.telefone ?? raw.cliente.phone,
+              avatar_url: raw.cliente.avatar_url ?? raw.cliente.foto_perfil ?? raw.cliente.avatar ?? raw.customer_avatar_url,
+            } : (raw.cliente_nome || raw.customer_name) ? {
+              nome: raw.cliente_nome ?? raw.customer_name,
+              email: raw.cliente_email ?? raw.customer_email,
+              telefone: raw.cliente_telefone ?? raw.customer_phone,
+            } : undefined,
+            notes: raw.notes,
+            status: mapStatus(raw.status),
+            createdAt: raw.createdAt ?? raw.created_at,
+            barbearia: raw.barbearia,
+            barbearia_nome: raw.barbearia_nome ?? raw.barbearia?.nome,
+          });
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return results;
+  },
   cancel: async (id: number): Promise<BookingResponse> => {
     const response = await api.patch<BookingResponse>(`/api/bookings/${id}/cancel`, {});
     return response.data;
@@ -224,6 +296,20 @@ export const bookingService = {
   finalize: async (id: number): Promise<BookingResponse> => {
     const response = await api.patch<BookingResponse>(`/api/bookings/${id}/finalize`, {});
     return response.data;
+  },
+  // Permanently remove a booking (if backend supports DELETE)
+  remove: async (id: number): Promise<void> => {
+    const response = await api.delete(`/api/bookings/${id}`);
+    if (response.status !== 200 && response.status !== 204) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+  },
+  // Remove all bookings for a barbearia (if backend supports scoped DELETE)
+  removeAllByBarbershop: async (id_barbearia: number): Promise<void> => {
+    const response = await api.delete(`/api/barbearias/${id_barbearia}/bookings`);
+    if (response.status !== 200 && response.status !== 204) {
+      throw new Error(`HTTP ${response.status}`);
+    }
   },
 };
 

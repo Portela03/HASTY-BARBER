@@ -34,6 +34,7 @@ const BarbershopConfig: React.FC = () => {
     reschedule_window_days: null,
     business_hours: emptyHours(),
   } as BarbeariaConfig);
+  
 
   useEffect(() => {
     let mounted = true;
@@ -113,6 +114,8 @@ const BarbershopConfig: React.FC = () => {
     }
     return false;
   }
+
+  
 
   // Copia o horário (open/close) do dia selecionado para os dias úteis (Seg–Sex), exceto o próprio e finais de semana
   function applyToWeekdays(fromDay: number) {
@@ -235,168 +238,157 @@ const BarbershopConfig: React.FC = () => {
     }
   }
 
+  const submitDisabled = saving || loading || hasValidationErrors();
+  const submitClass = 'relative px-4 py-2 rounded-md bg-amber-500 text-gray-900 ' + (submitDisabled ? 'bg-amber-300 text-gray-800 cursor-not-allowed' : 'hover:bg-amber-600 overflow-hidden group');
+
   return (
-    <div className="max-w-4xl mx-auto py-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Configurações da Barbearia</h1>
-        <Link to="/dashboard" className="text-indigo-600 hover:underline">Voltar</Link>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="relative bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 rounded-2xl shadow-2xl p-8 mb-6 border border-gray-600">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-amber-500/10 to-yellow-500/5 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-yellow-500/10 to-amber-500/5 rounded-full blur-3xl"></div>
+
+          <div className="relative z-10">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="mb-4 flex items-center gap-2 text-amber-400 hover:text-amber-300 transition-all hover:-translate-x-1"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="text-sm font-medium">Voltar</span>
+            </button>
+
+            <h1 className="text-5xl leading-tight font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 mb-4">
+              Configurações da Barbearia
+            </h1>
+            <p className="text-gray-200 text-sm">Defina duração, prazos e horário de funcionamento</p>
+          </div>
+        </div>
       </div>
 
-      {loading ? (
-        <div className="p-8 text-center">Carregando…</div>
-      ) : (
-        <form onSubmit={onSubmit} className="space-y-6">
-          {error && (
-            <div className="rounded-md bg-red-50 p-4 text-red-700 border border-red-200">{error}</div>
-          )}
-          {success && (
-            <div className="rounded-md bg-green-50 p-4 text-green-700 border border-green-200">{success}</div>
-          )}
+      <div style={{ animation: 'fadeInUp 420ms ease' }}>
+        <div className="bg-gray-800 rounded-2xl shadow-xl p-6 border border-gray-700">
+          {loading ? (
+            <div className="p-8 text-center">Carregando…</div>
+          ) : (
+            <form onSubmit={onSubmit} className="space-y-6">
+              {error && (
+                <div className="rounded-md bg-red-50 p-4 text-red-700 border border-red-200">{error}</div>
+              )}
+              {success && (
+                <div className="rounded-md bg-green-50 p-4 text-green-700 border border-green-200">{success}</div>
+              )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <label className="block">
-              <span className="block text-sm font-medium text-gray-700">Duração mínima (min)</span>
-              <input
-                type="number"
-                min={5}
-                step={5}
-                value={form.duration_minutes}
-                onChange={(e) => updateField('duration_minutes', Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required
-              />
-            </label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <label className="block">
+                  <span className="block text-sm font-medium text-gray-200">Duração mínima (min)</span>
+                  <input
+                    type="number"
+                    min={5}
+                    step={5}
+                    value={form.duration_minutes}
+                    onChange={(e) => updateField('duration_minutes', Number(e.target.value))}
+                    className="mt-1 block w-full rounded-md bg-gray-700 border border-gray-600 text-white shadow-sm focus:border-amber-500 focus:ring-amber-500"
+                    required
+                  />
+                </label>
 
-            <label className="block">
-              <span className="block text-sm font-medium text-gray-700">Prazo para cancelar (dias)</span>
-              <input
-                type="number"
-                min={0}
-                max={365}
-                step={1}
-                value={form.cancel_window_days ?? ''}
-                onChange={(e) => updateField('cancel_window_days', e.target.value === '' ? null : Math.max(0, Math.min(365, Math.floor(Number(e.target.value) || 0))))}
-                placeholder="ex.: 3"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              />
-              <p className="mt-1 text-xs text-gray-500">0 significa sem restrição</p>
-            </label>
+                <label className="block">
+                  <span className="block text-sm font-medium text-gray-200">Prazo para cancelamento (dias)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={form.cancel_window_days ?? ''}
+                    onChange={(e) => updateField('cancel_window_days', e.target.value === '' ? null : Number(e.target.value))}
+                    className="mt-1 block w-full rounded-md bg-gray-700 border border-gray-600 text-white shadow-sm focus:border-amber-500 focus:ring-amber-500"
+                    placeholder="0 = sem prazo"
+                  />
+                  {formErrors?.cancel_window_days && (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.cancel_window_days}</p>
+                  )}
+                </label>
 
-            <label className="block">
-              <span className="block text-sm font-medium text-gray-700">Prazo para reagendar (dias)</span>
-              <input
-                type="number"
-                min={0}
-                max={365}
-                step={1}
-                value={form.reschedule_window_days ?? ''}
-                onChange={(e) => updateField('reschedule_window_days', e.target.value === '' ? null : Math.max(0, Math.min(365, Math.floor(Number(e.target.value) || 0))))}
-                placeholder="ex.: 3"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              />
-              <p className="mt-1 text-xs text-gray-500">0 significa sem restrição</p>
-            </label>
-          </div>
+                <label className="block">
+                  <span className="block text-sm font-medium text-gray-200">Prazo para reagendamento (dias)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={form.reschedule_window_days ?? ''}
+                    onChange={(e) => updateField('reschedule_window_days', e.target.value === '' ? null : Number(e.target.value))}
+                    className="mt-1 block w-full rounded-md bg-gray-700 border border-gray-600 text-white shadow-sm focus:border-amber-500 focus:ring-amber-500"
+                    placeholder="0 = sem prazo"
+                  />
+                  {formErrors?.reschedule_window_days && (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.reschedule_window_days}</p>
+                  )}
+                </label>
+              </div>
 
-          <div>
-            <h2 className="text-lg font-medium mb-3">Horário de Funcionamento</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {form.business_hours.map((h) => (
-                <div key={h.day} className="border rounded-md p-3">
-                  <div className="text-sm font-medium mb-2">{dayLabels[h.day]}</div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <label className="block text-xs text-gray-600">Abre</label>
-                      <input
-                        type="time"
-                        value={h.open ?? ''}
-                        onChange={(e) => updateHour(h.day, 'open', e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      />
+              <div>
+                <h2 className="text-lg font-semibold text-white mb-3">Horário de Funcionamento</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {form.business_hours.map((h) => (
+                    <div key={h.day} className="border rounded-md p-3">
+                      <div className="text-sm font-medium mb-2 text-white">{dayLabels[h.day]}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <label className="block text-xs text-white">Abre</label>
+                          <input
+                            type="time"
+                            value={h.open ?? ''}
+                            onChange={(e) => updateHour(h.day, 'open', e.target.value)}
+                            className="mt-1 block w-full rounded-md bg-gray-700 border border-gray-600 text-white shadow-sm focus:border-amber-500 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-xs text-white">Fecha</label>
+                          <input
+                            type="time"
+                            value={h.close ?? ''}
+                            onChange={(e) => updateHour(h.day, 'close', e.target.value)}
+                            className="mt-1 block w-full rounded-md bg-gray-700 border border-gray-600 text-white shadow-sm focus:border-amber-500 focus:ring-amber-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between">
+                        <p className="text-xs text-gray-300">Deixe vazio para fechado</p>
+                        <button
+                          type="button"
+                          onClick={() => applyToWeekdays(h.day)}
+                          className="text-xs text-indigo-600"
+                          title="Repetir este horário em Seg–Sex (exceto este dia)"
+                        >
+                          Repetir nos dias úteis
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <label className="block text-xs text-gray-600">Fecha</label>
-                      <input
-                        type="time"
-                        value={h.close ?? ''}
-                        onChange={(e) => updateHour(h.day, 'close', e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <p className="text-xs text-gray-500">Deixe vazio para fechado</p>
-                    <button
-                      type="button"
-                      onClick={() => applyToWeekdays(h.day)}
-                      className="text-xs text-indigo-600 hover:underline"
-                      title="Repetir este horário em Seg–Sex (exceto este dia)"
-                    >
-                      Repetir nos dias úteis
-                    </button>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    {h.open && h.close ? (
-                      <div className="text-xs text-gray-600">{`${h.open} → ${((() => {
-                        const [hh, mm] = h.open.split(':').map((x) => parseInt(x, 10));
-                        const dur = Number(form.duration_minutes) || 0;
-                        const total = hh * 60 + mm + dur;
-                        const endH = Math.floor(total / 60) % 24;
-                        const endM = total % 60;
-                        return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-                      })())}`}</div>
-                    ) : (
-                      <div />
-                    )}
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          // copy this day's hours to ALL days
-                          setForm((prev) => ({
-                            ...prev,
-                            business_hours: prev.business_hours.map((x) => ({ ...x, open: h.open ?? null, close: h.close ?? null })),
-                          }));
-                        }}
-                        className="text-xs text-indigo-600 hover:underline"
-                        title="Copiar para todos os dias"
-                      >
-                        Copiar para todos
-                      </button>
-                    </div>
-                  </div>
-                  {formErrors?.dayErrors?.[h.day] ? (
-                    <div className="mt-2 text-sm text-red-600">{formErrors.dayErrors[h.day]}</div>
-                  ) : null}
-                  <div className="mt-1 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setForm((prev) => ({
-                        ...prev,
-                        business_hours: prev.business_hours.map((x) => x.day === h.day ? { ...x, open: null, close: null } : x)
-                      }))}
-                      className="text-xs text-gray-600 hover:text-gray-800 hover:underline"
-                    >
-                      Limpar este dia
-                    </button>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
 
-          <div className="flex justify-end gap-3">
-            <Link to="/dashboard" className="px-4 py-2 rounded-md border border-gray-300 text-gray-700">Cancelar</Link>
-            <button
-              type="submit"
-              disabled={saving || loading || hasValidationErrors()}
-              className="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
-            >
-              {saving ? 'Salvando…' : 'Salvar'}
-            </button>
-          </div>
-        </form>
-      )}
+              <div className="flex justify-end gap-3">
+                <Link
+                  to="/dashboard"
+                  className="w-full sm:w-auto relative inline-flex items-center px-4 py-2 rounded-md text-sm border bg-gray-700 text-white border-gray-600 hover:bg-gray-600"
+                >
+                  <span className="relative z-10">Cancelar</span>
+                </Link>
+                <button
+                  type="submit"
+                  disabled={submitDisabled}
+                  className={submitClass}
+                >
+                  <span className="relative z-10">{saving ? 'Salvando…' : 'Salvar'}</span>
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 };

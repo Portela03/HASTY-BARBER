@@ -73,147 +73,137 @@ const RegisterClient: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-            Cadastro de Cliente
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Crie sua conta para agendar serviços
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="nome" className="block text-sm font-medium text-gray-700">
-                Nome completo *
-              </label>
-              <input
-                id="nome"
-                name="nome"
-                type="text"
-                required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Seu nome completo"
-                value={formData.nome}
-                onChange={handleChange}
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email *
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="seu@email.com"
-                value={formData.email}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="telefone" className="block text-sm font-medium text-gray-700">
-                Telefone *
-              </label>
-              <input
-                id="telefone"
-                name="telefone"
-                type="tel"
-                required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="(11) 99999-9999"
-                value={formData.telefone}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="senha" className="block text-sm font-medium text-gray-700">
-                Senha *
-              </label>
-              <input
-                id="senha"
-                name="senha"
-                type="password"
-                required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Mínimo 6 caracteres"
-                value={formData.senha}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirmar senha *
-              </label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Digite a senha novamente"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <div className="text-red-800 text-sm text-center">
-                {error}
-              </div>
-            </div>
-          )}
-
-          {success && (
-            <div className="bg-green-50 border border-green-200 rounded-md p-3">
-              <div className="text-green-800 text-sm text-center">
-                {success}
-              </div>
-            </div>
-          )}
-
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-150 ease-in-out"
-            >
-              {isLoading ? 'Cadastrando...' : 'Cadastrar Cliente'}
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="relative bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 rounded-2xl shadow-2xl p-8 mb-6 border border-gray-600 overflow-visible">
+          <div className="relative z-10">
+            <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-2 text-amber-400 group">
+              <svg className="w-5 h-5 transition-transform duration-300 group-hover:-translate-x-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              <span className="text-sm font-medium transition-transform duration-300 group-hover:-translate-x-2">Voltar</span>
             </button>
+            <h1 className="text-4xl leading-tight font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-400 mb-3">Cadastro de Cliente</h1>
+            <p className="text-gray-300 text-sm">Crie sua conta para agendar serviços</p>
           </div>
+        </div>
 
-          <div className="text-center space-y-2">
-            <p className="text-sm text-gray-600">
-              Já tem uma conta?{' '}
-              <Link
-                to="/login"
-                className="font-medium text-indigo-600 hover:text-indigo-500"
-              >
-                Faça login aqui
-              </Link>
-            </p>
-            <p className="text-sm text-gray-600">
-              Quer cadastrar uma barbearia?{' '}
-              <Link
-                to="/register/barbershop"
-                className="font-medium text-green-600 hover:text-green-500"
-              >
-                Clique aqui
-              </Link>
-            </p>
+        <div style={{ animation: 'fadeInUp 420ms ease' }}>
+          <div className="bg-gray-800 rounded-2xl p-6 border border-gray-700 max-w-md mx-auto">
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label htmlFor="nome" className="block text-sm text-gray-300 mb-2">Nome completo *</label>
+                  <input
+                    id="nome"
+                    name="nome"
+                    type="text"
+                    required
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white"
+                    placeholder="Seu nome completo"
+                    value={formData.nome}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="email" className="block text-sm text-gray-300 mb-2">Email *</label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white"
+                    placeholder="seu@email.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="telefone" className="block text-sm text-gray-300 mb-2">Telefone *</label>
+                  <input
+                    id="telefone"
+                    name="telefone"
+                    type="tel"
+                    required
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white"
+                    placeholder="(11) 99999-9999"
+                    value={formData.telefone}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="senha" className="block text-sm text-gray-300 mb-2">Senha *</label>
+                  <input
+                    id="senha"
+                    name="senha"
+                    type="password"
+                    required
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white"
+                    placeholder="Mínimo 6 caracteres"
+                    value={formData.senha}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm text-gray-300 mb-2">Confirmar senha *</label>
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    required
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white"
+                    placeholder="Digite a senha novamente"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                  <div className="text-red-800 text-sm text-center">{error}</div>
+                </div>
+              )}
+
+              {success && (
+                <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                  <div className="text-green-800 text-sm text-center">{success}</div>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate(-1)}
+                  className="relative flex-1 bg-gradient-to-r from-gray-700 to-gray-600 text-white py-3 rounded-lg font-semibold transform transition-transform duration-200 shadow-lg hover:shadow-xl hover:-translate-y-1 overflow-hidden group"
+                >
+                  <span className="relative z-10">Cancelar</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className={`relative flex-1 bg-gradient-to-r from-amber-500 to-yellow-600 text-gray-900 py-3 rounded-lg font-semibold transform transition-transform duration-200 ${isLoading ? 'opacity-70 cursor-not-allowed' : 'overflow-hidden group hover:-translate-y-1'}`}
+                >
+                  <span className="relative z-10">{isLoading ? 'Cadastrando...' : 'Cadastrar Cliente'}</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                </button>
+              </div>
+
+              <div className="text-center mt-3 space-y-2">
+                <p className="text-sm text-gray-400">Já tem uma conta?{' '}
+                  <Link to="/login" className="font-medium text-amber-400 hover:text-amber-300">Faça login aqui</Link>
+                </p>
+                <p className="text-sm text-gray-400">Quer cadastrar uma barbearia?{' '}
+                  <Link to="/register/barbershop" className="font-medium text-amber-400 hover:text-amber-300">Clique aqui</Link>
+                </p>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { barbershopService, barberService, serviceService, bookingService } from '../services/api';
+import { barbershopService, barberService, serviceService, bookingService, evaluationService } from '../services/api';
+import { formatPhoneBR } from '../utils/phone';
 import type { Barbearia, Barbeiro, ServiceItem, BookingForm } from '../types';
 import { isValidTimeHHMM } from '../utils/validation';
 import { useToast } from '../hooks/useToast';
@@ -18,6 +19,10 @@ const BookingService: React.FC = () => {
   const [availableBarbers, setAvailableBarbers] = useState<Barbeiro[] | null>(null);
   const [isLoadingBarbers, setIsLoadingBarbers] = useState(false);
   const [barbersError, setBarbersError] = useState<string | null>(null);
+  // Reviews cache for barbers (id_barbeiro -> {average,total})
+  const [barberReviewsMap, setBarberReviewsMap] = useState<Record<number, { average: number | null; total: number }>>({});
+  // Reviews cache for barbershops (id_barbearia -> {average,total})
+  const [barbershopReviewsMap, setBarbershopReviewsMap] = useState<Record<number, { average: number | null; total: number }>>({});
   
   const [availableServices, setAvailableServices] = useState<ServiceItem[] | null>(null);
   const [isLoadingServices, setIsLoadingServices] = useState(false);
@@ -44,6 +49,20 @@ const BookingService: React.FC = () => {
     try {
       const data = await barbershopService.list();
       setBarbershops(data);
+      // fetch barbershop review summaries
+      try {
+        const ids = (data || []).map((s: any) => Number(s.id_barbearia)).filter((x: number) => Number.isFinite(x) && x > 0);
+        const idsToFetch = ids.filter((i: number) => !(i in barbershopReviewsMap));
+        if (idsToFetch.length > 0) {
+          const results = await Promise.allSettled(idsToFetch.map((id) => evaluationService.listByBarbershop(id)));
+          const next: Record<number, { average: number | null; total: number }> = {};
+          results.forEach((res, idx) => {
+            const id = idsToFetch[idx];
+            if (res.status === 'fulfilled' && res.value) next[id] = { average: res.value.average ?? null, total: res.value.total ?? 0 };
+          });
+          if (Object.keys(next).length > 0) setBarbershopReviewsMap((p) => ({ ...p, ...next }));
+        }
+      } catch {}
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Erro ao carregar barbearias.';
       setBarbershopError(msg);
@@ -63,6 +82,20 @@ const BookingService: React.FC = () => {
     try {
       const barbers = await barberService.listByBarbershop(id, { onlyActive: true });
       setAvailableBarbers(barbers || []);
+      // fetch barber review summaries for these barbers
+      try {
+        const ids = (barbers || []).map((b: any) => Number((b as any).id_barbeiro)).filter((x) => Number.isFinite(x) && x > 0);
+        const idsToFetch = ids.filter((i) => !(i in barberReviewsMap));
+        if (idsToFetch.length > 0) {
+          const results = await Promise.allSettled(idsToFetch.map((bid) => evaluationService.listByBarber(bid)));
+          const next: Record<number, { average: number | null; total: number }> = {};
+          results.forEach((res, idx) => {
+            const bid = idsToFetch[idx];
+            if (res.status === 'fulfilled' && res.value) next[bid] = { average: res.value.average ?? null, total: res.value.total ?? 0 };
+          });
+          if (Object.keys(next).length > 0) setBarberReviewsMap((p) => ({ ...p, ...next }));
+        }
+      } catch {}
     } catch (err: any) {
       setBarbersError(err?.response?.data?.message || err?.message || 'Erro ao carregar barbeiros.');
     } finally {
@@ -232,6 +265,32 @@ const BookingService: React.FC = () => {
                         <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors mb-2">
                           {shop.nome}
                         </h3>
+                        {/* Ratings */}
+                        {(() => {
+                          const rev = barbershopReviewsMap[Number(shop.id_barbearia)];
+                          if (!rev || (rev.average === null && rev.total === 0)) {
+                            return <p className="text-xs text-gray-400 mb-1">Sem avaliações</p>;
+                          }
+                          const avg = Number.isFinite(Number(rev.average)) ? Number(rev.average) : null;
+                          return (
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-0.5">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <svg
+                                    key={i}
+                                    className={`w-4 h-4 ${avg !== null && i < Math.round(avg) ? 'text-yellow-400' : 'text-white/40'}`}
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.287 3.957c.3.921-.755 1.688-1.54 1.118l-3.37-2.448a1 1 0 00-1.176 0l-3.37 2.448c-.785.57-1.84-.197-1.54-1.118l1.287-3.957a1 1 0 00-.364-1.118L2.07 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.957z" />
+                                  </svg>
+                                ))}
+                              </div>
+                              <span className="text-xs tabular-nums text-amber-200 font-semibold">{avg !== null ? avg.toFixed(1) : '-'}</span>
+                              <span className="text-xs text-gray-400">({rev.total})</span>
+                            </div>
+                          );
+                        })()}
                         {shop.endereco && (
                           <p className="text-sm text-gray-400 mb-1 flex items-start gap-2">
                             <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -374,7 +433,12 @@ const BookingService: React.FC = () => {
             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
               <h2 className="text-xl font-bold text-amber-400 mb-4">Escolha o Barbeiro</h2>
               
-              {isLoadingBarbers ? (
+              {/* Only show barbers after selecting at least one service */}
+              {booking.service.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-400">Selecione primeiro ao menos um serviço para ver os barbeiros disponíveis.</p>
+                </div>
+              ) : isLoadingBarbers ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500" />
                 </div>
@@ -401,6 +465,14 @@ const BookingService: React.FC = () => {
                         return selectedServiceNames.map((n) => n.trim().toLowerCase()).every((n) => specs.has(n));
                       })
                     : (availableBarbers || []);
+
+                  if ((filteredBarbers || []).length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <p className="text-gray-400">Nenhum barbeiro disponível para os serviços selecionados.</p>
+                      </div>
+                    );
+                  }
 
                   return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -440,6 +512,49 @@ const BookingService: React.FC = () => {
                                     {barber.especialidades}
                                   </p>
                                 )}
+                                {/* Barber Ratings */}
+                                {(() => {
+                                  const rev = barberReviewsMap[Number(barber.id_barbeiro)];
+                                  if (!rev || (rev.average === null && rev.total === 0)) {
+                                    return <p className="text-xs text-gray-400 mt-1">Sem avaliações</p>;
+                                  }
+                                  const avg = Number.isFinite(Number(rev.average)) ? Number(rev.average) : null;
+                                  return (
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <div className="flex items-center gap-0.5">
+                                        {Array.from({ length: 5 }).map((_, i) => (
+                                          <svg
+                                            key={i}
+                                            className={`w-3 h-3 ${avg !== null && i < Math.round(avg) ? 'text-yellow-400' : 'text-white/40'}`}
+                                            viewBox="0 0 20 20"
+                                            fill="currentColor"
+                                          >
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.287 3.957c.3.921-.755 1.688-1.54 1.118l-3.37-2.448a1 1 0 00-1.176 0l-3.37 2.448c-.785.57-1.84-.197-1.54-1.118l1.287-3.957a1 1 0 00-.364-1.118L2.07 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.957z" />
+                                          </svg>
+                                        ))}
+                                      </div>
+                                      <span className="text-xs tabular-nums text-amber-200 font-semibold">{avg !== null ? avg.toFixed(1) : '-'}</span>
+                                      <span className="text-xs text-gray-400">({rev.total})</span>
+                                    </div>
+                                  );
+                                })()}
+                                    {/* Contact info */}
+                                    {barber.telefone && (
+                                      <p className="text-xs text-gray-300 mt-1 flex items-center gap-2">
+                                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                        </svg>
+                                        <span>{formatPhoneBR(barber.telefone)}</span>
+                                      </p>
+                                    )}
+                                    {barber.email && (
+                                      <p className="text-xs text-gray-300 mt-0.5 flex items-center gap-2">
+                                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m0 0v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8m18 0L12 13 3 8" />
+                                        </svg>
+                                        <span className="truncate">{barber.email}</span>
+                                      </p>
+                                    )}
                               </div>
                             </div>
                           </div>
