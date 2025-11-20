@@ -1,12 +1,14 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { barbershopService, barberService, serviceService, bookingService } from '../services/api';
 import type { Barbearia, Barbeiro, ServiceItem, BookingForm } from '../types';
 import { isValidTimeHHMM } from '../utils/validation';
+import { useToast } from '../hooks/useToast';
+import Toast from './Toast';
 
 const BookingService: React.FC = () => {
   const navigate = useNavigate();
+  const { toasts, removeToast, error: showError, warning } = useToast();
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedBarbershopId, setSelectedBarbershopId] = useState<number | ''>('');
   const [barbershops, setBarbershops] = useState<Barbearia[]>([]);
@@ -30,6 +32,7 @@ const BookingService: React.FC = () => {
   });
   const [bookingDurationMinutes, setBookingDurationMinutes] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     loadBarbershops();
@@ -69,7 +72,6 @@ const BookingService: React.FC = () => {
     try {
       const services = await serviceService.listByBarbershop(id);
       setAvailableServices(services || []);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setServicesError(err?.response?.data?.message || err?.message || 'Erro ao carregar serviços.');
     } finally {
@@ -93,44 +95,55 @@ const BookingService: React.FC = () => {
 
   const handleSubmit = async () => {
     if (booking.service.length === 0) {
-      alert('Selecione pelo menos um serviço.');
+      warning('Selecione pelo menos um serviço.');
       return;
     }
     if (!booking.date || !booking.time) {
-      alert('Informe a data e horário.');
+      warning('Informe a data e horário.');
       return;
     }
     if (!isValidTimeHHMM(booking.time)) {
-      alert('Horário inválido. Use o formato HH:MM (ex: 09:30).');
+      warning('Horário inválido. Use o formato HH:MM (ex: 09:30).');
       return;
     }
     if (!booking.barber_id) {
-      alert('Selecione um barbeiro.');
+      warning('Selecione um barbeiro.');
       return;
     }
 
     const selectedDateTime = new Date(`${booking.date}T${booking.time}`);
     const now = new Date();
     if (selectedDateTime < now) {
-      alert('Não é possível agendar no passado.');
+      warning('Não é possível agendar no passado.');
       return;
     }
 
     setIsSubmitting(true);
+    
+    const payload = {
+      id_barbearia: Number(selectedBarbershopId),
+      service: booking.service,
+      date: booking.date,
+      time: booking.time,
+      barber_id: Number(booking.barber_id),
+      notes: booking.notes || undefined,
+    };
+    
+    console.log('[FRONTEND] Tentando criar agendamento:', payload);
+    
     try {
-      await bookingService.create({
-        id_barbearia: Number(selectedBarbershopId),
-        service: booking.service,
-        date: booking.date,
-        time: booking.time,
-        barber_id: Number(booking.barber_id),
-        notes: booking.notes || undefined,
-      });
-      alert('Agendamento criado com sucesso!');
-      navigate('/dashboard');
+      const result = await bookingService.create(payload);
+      console.log('[FRONTEND] Agendamento criado com sucesso:', result);
+      setShowSuccessModal(true);
     } catch (err: any) {
+      console.error('[FRONTEND] Erro ao criar agendamento:', err);
+      console.error('[FRONTEND] Response completa:', err?.response);
+      console.error('[FRONTEND] Response data:', err?.response?.data);
+      console.error('[FRONTEND] Status HTTP:', err?.response?.status);
+      console.error('[FRONTEND] Payload enviado:', payload);
+      
       const msg = err?.response?.data?.message || err?.message || 'Erro ao criar agendamento.';
-      alert(msg);
+      showError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -459,6 +472,60 @@ const BookingService: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map((toast) => (
+          <Toast
+            key={toast.id}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => removeToast(toast.id)}
+          />
+        ))}
+      </div>
+
+      {/* Modal de Sucesso */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-2xl p-8 max-w-md w-full border-2 border-green-500/30 shadow-2xl shadow-green-500/20 animate-[fadeInUp_0.3s_ease-out]">
+            {/* Ícone de Sucesso */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-green-600 to-emerald-700 rounded-full p-4">
+                  <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Título e Mensagem */}
+            <h3 className="text-2xl font-bold text-center mb-3 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+              Solicitação Enviada!
+            </h3>
+            <p className="text-gray-300 text-center mb-2 leading-relaxed">
+              Seu pedido de agendamento foi enviado com sucesso!
+            </p>
+            <p className="text-gray-400 text-center mb-2 text-sm leading-relaxed">
+              Agora é só aguardar a <span className="text-amber-400 font-semibold">confirmação do barbeiro</span>.
+            </p>
+            <p className="text-gray-500 text-center mb-8 text-xs leading-relaxed">
+              Você pode acompanhar o status do seu agendamento na próxima tela.
+            </p>
+
+            {/* Botão */}
+            <button
+              onClick={() => navigate('/my-appointments')}
+              className="group relative w-full bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-green-500/50 hover:-translate-y-0.5 overflow-hidden"
+            >
+              <span className="relative z-10">Entendido!</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

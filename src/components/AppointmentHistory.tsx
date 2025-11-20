@@ -237,19 +237,15 @@ const AppointmentHistory: React.FC = () => {
                   className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 rounded-xl p-6 border border-gray-600 hover:border-amber-500 transition-all shadow-lg hover:shadow-2xl hover:shadow-amber-500/20 hover:-translate-y-1 animate-[fadeInUp_0.6s_ease-out]"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                    {/* Main Info */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          {getStatusBadge(booking.status)}
-                          <h3 className="text-xl font-bold text-white mt-2">
-                            {booking.service}
-                          </h3>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      {/* Main Info */}
+                      <div className="flex-1">
+                      <div className="mb-6">
+                        {getStatusBadge(booking.status)}
+                        <h3 className="text-xl font-bold text-white mt-2">
+                          {booking.service}
+                        </h3>
+                      </div>                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                         {/* Date & Time */}
                         <div className="flex items-center gap-2 text-gray-300">
                           <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
