@@ -1232,13 +1232,16 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
 
-        <div className="bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 rounded-2xl shadow-2xl mb-6 border border-gray-600 overflow-visible">
-          <div className="px-4 py-5 sm:px-6 border-b border-gray-700">
+        <div className="relative bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 rounded-2xl shadow-2xl mb-6 border border-gray-600 overflow-hidden animate-[fadeInUp_0.6s_ease-out]">
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-transparent to-yellow-500/10 opacity-50" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-3xl" />
+          <div className="relative z-10 px-4 py-5 sm:px-6 border-b border-gray-600">
             <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 items-center">
               <div className="flex items-center gap-3 order-1">
                 {(user.tipo_usuario === 'barbeiro' || user.tipo_usuario === 'cliente') && (
                   <>
-                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-amber-500 text-white flex items-center justify-center text-sm font-semibold select-none overflow-hidden">
+                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 text-white flex items-center justify-center text-sm font-semibold select-none overflow-hidden border-2 border-amber-400 shadow-lg shadow-amber-500/50">
                       {user.avatar_url ? (
                         <img src={user.avatar_url} alt={user.nome} className="h-full w-full object-cover" />
                       ) : (
@@ -1256,10 +1259,10 @@ const Dashboard: React.FC = () => {
                           type="button"
                           onClick={openUserFilePicker}
                           disabled={uploadingUserAvatar}
-                          className={`inline-flex items-center gap-2 px-2.5 sm:px-3 py-2 rounded-md text-sm font-medium border ${uploadingUserAvatar ? 'bg-gray-700 text-gray-400 border-gray-600 cursor-not-allowed' : 'bg-gray-800 text-amber-300 border-amber-400/20 hover:bg-amber-500/10'}`}
+                          className={`inline-flex items-center gap-2 px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium border transition-all duration-300 ${uploadingUserAvatar ? 'bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed' : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-amber-600 hover:border-amber-500 hover:text-white shadow-lg hover:shadow-amber-500/50'}`}
                         >
                           {/* Camera icon */}
-                          <svg className="h-4 w-4 text-amber-300" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path d="M4 5a2 2 0 00-2 2v7a3 3 0 003 3h10a3 3 0 003-3V7a2 2 0 00-2-2h-2.382a1 1 0 01-.894-.553L11.789 2.447A1 1 0 0010.895 2H9.105a1 1 0 00-.894.447L6.276 4.447A1 1 0 015.382 5H4zm6 3a4 4 0 110 8 4 4 0 010-8z"/>
                           </svg>
                           <span className="hidden sm:inline">{uploadingUserAvatar ? 'Enviando...' : 'Atualizar foto'}</span>
@@ -1277,37 +1280,37 @@ const Dashboard: React.FC = () => {
                 )}
               </div>
               <div className="col-span-2 sm:col-span-1 text-center order-3 sm:order-2">
-                <h1 className="text-2xl font-bold leading-7 text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 sm:text-3xl sm:leading-9 bg-[length:200%_auto] animate-[shimmer_5s_infinite]">
-                  Dashboard - Hasty Barber
+                <h1 className="text-2xl font-black leading-7 text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 sm:text-3xl sm:leading-9 animate-[shimmer_3s_infinite]" style={{ backgroundSize: '200% auto' }}>
+                  HASTY BARBER
                 </h1>
-                <p className="mt-1 text-sm text-gray-300 truncate max-w-[90vw] sm:max-w-none px-2 sm:px-0 mx-auto">Bem-vindo ao seu painel de controle</p>
+                <p className="mt-1 text-sm text-gray-300 truncate max-w-[90vw] sm:max-w-none px-2 sm:px-0 mx-auto flex items-center justify-center gap-2"><span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />Bem-vindo ao seu painel de controle</p>
               </div>
               <div className="justify-self-end order-2 sm:order-3">
                 <div className="flex items-center gap-2">
                   <div className="relative inline-block text-left" ref={headerMenuRef}>
                     <button
                       onClick={() => setHeaderMenuOpen((v) => !v)}
-                      className={`${headerMenuOpen ? 'ring-2 ring-amber-400 bg-amber-600/10' : 'bg-gray-800'} inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-500/20 text-amber-400 shadow-sm hover:bg-amber-500/10 focus:outline-none focus:ring-2 focus:ring-amber-400`}
+                      className={`${headerMenuOpen ? 'bg-gray-700 ring-2 ring-amber-500' : 'bg-gray-700'} inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-600 text-gray-200 shadow-lg hover:bg-amber-600 hover:border-amber-500 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-500`}
                       title="Ações rápidas"
                       aria-haspopup="menu"
                       aria-expanded={headerMenuOpen}
                       aria-controls="header-actions-menu"
                     >
                       {/* Three bars icon */}
-                      <svg className="h-5 w-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                         <path strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" d="M3.75 5.25h16.5m-16.5 6h16.5m-16.5 6h16.5" />
                       </svg>
                     </button>
                     {headerMenuOpen && (
                       <div
                         id="header-actions-menu"
-                        className="origin-top-right absolute right-0 mt-2 w-56 rounded-xl border border-gray-700 bg-gradient-to-br from-gray-800 to-gray-700 shadow-lg ring-1 ring-black/20 z-20 overflow-hidden divide-y divide-gray-700 text-white"
+                        className="origin-top-right absolute right-0 mt-2 w-56 rounded-xl border border-gray-600 bg-gray-800 shadow-2xl ring-1 ring-black/20 z-[9999] overflow-hidden divide-y divide-gray-700"
                         role="menu"
                         aria-label="Ações"
                       >
                         <div className="p-1">
                           <button
-                            className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-200 hover:bg-amber-500/10 hover:text-amber-300 transition-colors"
+                            className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-200 hover:bg-amber-600 hover:text-white transition-all duration-300"
                             role="menuitem"
                             onClick={() => {
                               setHeaderMenuOpen(false);
@@ -1368,7 +1371,7 @@ const Dashboard: React.FC = () => {
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="relative inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 overflow-hidden group"
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 hover:shadow-red-500/50 hover:-translate-y-0.5"
                   >
                     <span className="relative z-10">Sair</span>
                     <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -1380,55 +1383,55 @@ const Dashboard: React.FC = () => {
         </div>
 
 
-        <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl mb-6 border border-gray-600">
+        <div className="bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 shadow-2xl rounded-2xl mb-6 border border-gray-600">
           <div className="px-4 py-5 sm:p-6">
-            <h2 className="text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 mb-4">
+            <h2 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-400 mb-4">
               Informações do Usuário
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <dt className="text-sm font-medium text-gray-300">Nome</dt>
-                <dd className="mt-1 text-sm text-gray-200">{user.nome}</dd>
+                <dt className="text-sm font-medium text-gray-400">Nome</dt>
+                <dd className="mt-1 text-sm text-white">{user.nome}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-300">Email</dt>
-                <dd className="mt-1 text-sm text-gray-200">{user.email}</dd>
+                <dt className="text-sm font-medium text-gray-400">Email</dt>
+                <dd className="mt-1 text-sm text-white">{user.email}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-300">Tipo de Usuário</dt>
+                <dt className="text-sm font-medium text-gray-400">Tipo de Usuário</dt>
                 <dd className="mt-1">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold border backdrop-blur-sm ${
                     user.tipo_usuario === 'proprietario' 
-                      ? 'bg-green-100 text-green-800' 
+                      ? 'bg-gradient-to-r from-amber-500/30 to-yellow-600/30 text-amber-200 border-amber-400/60 shadow-lg shadow-amber-500/20' 
                       : user.tipo_usuario === 'barbeiro'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-purple-100 text-purple-800'
+                      ? 'bg-gradient-to-r from-amber-500/30 to-yellow-600/30 text-amber-200 border-amber-400/60 shadow-lg shadow-amber-500/20'
+                      : 'bg-gradient-to-r from-amber-500/30 to-yellow-600/30 text-amber-200 border-amber-400/60 shadow-lg shadow-amber-500/20'
                   }`}>
                     {user.tipo_usuario}
                   </span>
                 </dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-300">ID do Usuário</dt>
-                <dd className="mt-1 text-sm text-gray-200">{user.id_usuario}</dd>
+                <dt className="text-sm font-medium text-gray-400">ID do Usuário</dt>
+                <dd className="mt-1 text-sm text-white">{user.id_usuario}</dd>
               </div>
             </div>
           </div>
         </div>
 
         {user.tipo_usuario === 'proprietario' && (
-          <div className="bg-gradient-to-br from-green-900/5 to-green-800/5 border border-green-700/20 rounded-lg p-4 mb-6 text-white">
+          <div className="bg-gradient-to-r from-amber-900/30 to-yellow-900/30 border border-amber-600 rounded-xl p-4 mb-6 shadow-lg shadow-amber-500/20">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-amber-300" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-green-300">
+                <h3 className="text-sm font-bold text-amber-200">
                   Barbearia cadastrada com sucesso!
                 </h3>
-                <div className="mt-2 text-sm text-green-200">
+                <div className="mt-2 text-sm text-amber-300">
                   <p>
                     Sua barbearia foi registrada no sistema. Agora você pode começar a gerenciar 
                     seus serviços, barbeiros e agendamentos.
@@ -1441,15 +1444,15 @@ const Dashboard: React.FC = () => {
 
         {/* Onboarding banner: shows when owner has missing setup items */}
         {user.tipo_usuario === 'proprietario' && showOnboardingBanner && (onboarding.missingHours || onboarding.missingBarbers || onboarding.missingServices) && (
-          <div className="bg-gradient-to-br from-yellow-900/5 to-amber-900/5 border border-yellow-800/20 rounded-lg p-4 mb-6 text-white">
+          <div className="bg-gradient-to-r from-yellow-900/30 to-amber-900/30 border border-yellow-600 rounded-xl p-4 mb-6 shadow-lg shadow-yellow-500/20">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <svg className="h-6 w-6 text-amber-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <svg className="h-6 w-6 text-yellow-300" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path d="M8.257 3.099c.366-.446.957-.717 1.574-.717s1.208.271 1.574.717l5.516 6.716c.467.57.38 1.435-.187 1.925a1.25 1.25 0 01-1.68-.172L11 9.08V15a1 1 0 11-2 0V9.08L3.007 11.83a1.25 1.25 0 01-1.68.172c-.567-.49-.654-1.355-.187-1.925L8.257 3.1z" />
                 </svg>
                 <div>
-                  <h3 className="text-sm font-medium text-amber-300">Completar configuração da sua barbearia</h3>
-                  <p className="mt-1 text-sm text-amber-200">
+                  <h3 className="text-sm font-bold text-yellow-200">Completar configuração da sua barbearia</h3>
+                  <p className="mt-1 text-sm text-yellow-300">
                     Parece que faltam algumas etapas para deixar sua barbearia pronta: {' '}
                     {onboarding.missingHours ? 'horários ' : ''}
                     {onboarding.missingBarbers ? (onboarding.missingHours ? '• barbeiros ' : 'barbeiros ') : ''}
@@ -1554,11 +1557,11 @@ const Dashboard: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           {user.tipo_usuario === 'proprietario' && (
             <>
-              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600">
+              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 rounded-xl shadow-xl border border-gray-600 hover:border-amber-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/20 hover:-translate-y-1">
                 <div className="p-5">
                   <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="flex-shrink-0">
+                      <svg className="h-8 w-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.196-2.196M17 20H7m10 0v-2c0-5.523-4.477-10-10-10s-10 4.477-10 10v2m20 0H7m0 0H2v-2a3 3 0 015.196-2.196M7 20v-2m3-14a3 3 0 106 0 3 3 0 00-6 0v4a1 1 0 001 1h4a1 1 0 001-1v-4z" />
                       </svg>
                     </div>
@@ -1579,7 +1582,7 @@ const Dashboard: React.FC = () => {
                                 alert('Erro ao localizar barbearia.');
                               }
                             }}
-                            className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
+                            className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
                             <span className="relative z-10">Cadastrar Barbeiro</span>
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -1592,11 +1595,11 @@ const Dashboard: React.FC = () => {
               </div>
 
 
-              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600">
+              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 rounded-xl shadow-xl border border-gray-600 hover:border-amber-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/20 hover:-translate-y-1">
                 <div className="p-5">
                   <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="flex-shrink-0">
+                      <svg className="h-8 w-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4h3a1 1 0 011 1v8a3 3 0 01-3 3H6a3 3 0 01-3-3V8a1 1 0 011-1h3z" />
                       </svg>
                     </div>
@@ -1617,7 +1620,7 @@ const Dashboard: React.FC = () => {
                                 alert('Erro ao localizar barbearia.');
                               }
                             }}
-                            className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
+                            className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
                             <span className="relative z-10">Cadastrar Serviço</span>
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -1629,11 +1632,11 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600">
+              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 rounded-xl shadow-xl border border-gray-600 hover:border-amber-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-500/20 hover:-translate-y-1">
                 <div className="p-5">
                   <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="flex-shrink-0">
+                      <svg className="h-8 w-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4h3a1 1 0 011 1v8a3 3 0 01-3 3H6a3 3 0 01-3-3V8a1 1 0 011-1h3z" />
                       </svg>
                     </div>
@@ -1654,7 +1657,7 @@ const Dashboard: React.FC = () => {
                                 alert('Erro ao localizar barbearia.');
                               }
                             }}
-                            className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
+                            className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
                             <span className="relative z-10">Ver Agendamentos</span>
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -1670,11 +1673,11 @@ const Dashboard: React.FC = () => {
 
           {user.tipo_usuario === 'barbeiro' && (
             <>
-              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600">
+              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 rounded-xl shadow-xl border border-gray-600 hover:border-amber-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/20 hover:-translate-y-1">
                 <div className="p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-8 w-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
@@ -1714,7 +1717,7 @@ const Dashboard: React.FC = () => {
                                 alert('Erro ao localizar barbearia.');
                               }
                             }}
-                            className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
+                            className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
                             <span className="relative z-10">Agendamentos do Barbeiro</span>
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -1730,11 +1733,11 @@ const Dashboard: React.FC = () => {
 
           {user.tipo_usuario === 'cliente' && (
             <>
-              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600">
+              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 rounded-xl shadow-xl border border-gray-600 hover:border-amber-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/20 hover:-translate-y-1">
                 <div className="p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-8 w-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4h3a1 1 0 011 1v8a3 3 0 01-3 3H6a3 3 0 01-3-3V8a1 1 0 011-1h3z" />
                       </svg>
                     </div>
@@ -1746,7 +1749,7 @@ const Dashboard: React.FC = () => {
                         <dd className="text-lg font-medium text-white">
                           <button
                             onClick={() => navigate('/booking')}
-                            className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
+                            className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
                             <span className="relative z-10">Agendar Serviço</span>
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -1758,11 +1761,11 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600">
+              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 rounded-xl shadow-xl border border-gray-600 hover:border-amber-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/20 hover:-translate-y-1">
                 <div className="p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-8 w-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
@@ -1771,7 +1774,7 @@ const Dashboard: React.FC = () => {
                         <dd className="text-lg font-medium text-white">
                           <button
                             onClick={() => navigate('/my-appointments')}
-                            className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
+                            className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
                             <span className="relative z-10">Meus Agendamentos</span>
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -1783,11 +1786,11 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600">
+              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 rounded-xl shadow-xl border border-gray-600 hover:border-amber-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/20 hover:-translate-y-1">
                 <div className="p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-8 w-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                       </svg>
                     </div>
@@ -1796,7 +1799,7 @@ const Dashboard: React.FC = () => {
                         <dd className="text-lg font-medium text-white">
                           <button
                             onClick={() => navigate('/appointment-history')}
-                            className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
+                            className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
                             <span className="relative z-10">Histórico</span>
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -1814,20 +1817,20 @@ const Dashboard: React.FC = () => {
         </div>
 
 
-        <div className="bg-gradient-to-br from-blue-900/5 to-blue-800/5 border border-blue-700/20 rounded-lg p-4 text-white">
+        <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 rounded-xl shadow-xl border border-gray-600 p-4 mb-6">
           <div className="flex">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-amber-300" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="h-5 w-5 text-gray-300" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-blue-300">
+              <h3 className="text-sm font-bold text-gray-400">
                 Funcionalidades em desenvolvimento
               </h3>
-              <div className="mt-2 text-sm text-blue-200">
+              <div className="mt-2 text-sm text-gray-200">
                 <p>
-                  Estamos trabalhando para trazer mais funcionalidades para o Hasty Barber. 
+                  Estamos trabalhando para trazer mais funcionalidades para o Hasty Barber.
                   Em breve você terá acesso a agendamentos, gerenciamento de serviços e muito mais!
                 </p>
               </div>
@@ -1839,14 +1842,14 @@ const Dashboard: React.FC = () => {
         {showBooking && (
           <div className="fixed inset-0 z-50 flex">
             <div
-              className="fixed inset-0 bg-black/40 z-40"
+              className="fixed inset-0 bg-black/60 z-40"
               onClick={() => setShowBooking(false)}
               aria-hidden
             />
-            <aside className="ml-auto w-full max-w-md bg-white shadow-xl p-6 overflow-auto z-50">
+            <aside className="ml-auto w-full max-w-md bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 shadow-2xl p-6 overflow-auto z-50 border-l border-gray-600">
               {/* Step header */}
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">
+                <h3 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
                   {bookingStep === 1 ? 'Escolha a Barbearia' : 'Novo Agendamento'}
                 </h3>
                 <div className="flex items-center gap-2">
@@ -1856,7 +1859,7 @@ const Dashboard: React.FC = () => {
                       setBookingStep(1);
                       setSelectedBarbershopId('');
                     }}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-400 hover:text-white transition-colors"
                     aria-label="Fechar"
                   >
                     ✕
@@ -1867,15 +1870,15 @@ const Dashboard: React.FC = () => {
               {bookingStep === 1 ? (
                 <div className="space-y-4">
                   {isLoadingBarbershops && (
-                    <p className="text-sm text-gray-600">Carregando barbearias...</p>
+                    <p className="text-sm text-gray-300">Carregando barbearias...</p>
                   )}
                   {barbershopError && (
-                    <p className="text-sm text-red-600">{barbershopError}</p>
+                    <p className="text-sm text-red-400">{barbershopError}</p>
                   )}
                   {!isLoadingBarbershops && !barbershopError && (
-                    <ul className="divide-y divide-gray-200">
+                    <ul className="divide-y divide-gray-600">
                       {barbershops.length === 0 && (
-                        <li className="py-3 text-sm text-gray-600">Nenhuma barbearia encontrada.</li>
+                        <li className="py-3 text-sm text-gray-400">Nenhuma barbearia encontrada.</li>
                       )}
                       {barbershops.map((b) => (
                         <li key={b.id_barbearia} className="py-3">
@@ -1899,15 +1902,15 @@ const Dashboard: React.FC = () => {
                                 );
                               })()}
                               {b.endereco && (
-                                <p className="text-sm text-gray-600">{b.endereco}</p>
+                                <p className="text-sm text-gray-400">{b.endereco}</p>
                               )}
                               {b.telefone_contato && (
-                                <p className="text-sm text-gray-600">{b.telefone_contato}</p>
+                                <p className="text-sm text-gray-400">{b.telefone_contato}</p>
                               )}
                             </div>
                             <button
                               onClick={() => setSelectedBarbershopId(b.id_barbearia)}
-                              className={`relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${selectedBarbershopId === b.id_barbearia ? 'bg-green-600 hover:bg-green-700' : 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group`}
+                              className={`inline-flex items-center px-3 py-2 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white transition-all duration-300 ${selectedBarbershopId === b.id_barbearia ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700' : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700'} focus:outline-none focus:ring-2 focus:ring-cyan-500`}
                             >
                                 <span className="relative z-10">{selectedBarbershopId === b.id_barbearia ? 'Selecionado' : 'Selecionar'}</span>
                                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -1922,7 +1925,7 @@ const Dashboard: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setShowBooking(false)}
-                      className="relative px-4 py-2 rounded-md border border-gray-300 bg-white text-sm overflow-hidden group"
+                      className="px-4 py-2 rounded-xl border border-gray-600 bg-gray-700 text-gray-200 text-sm font-bold hover:bg-gray-600 transition-colors"
                     >
                       <span className="relative z-10">Cancelar</span>
                       <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/8 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -1931,7 +1934,7 @@ const Dashboard: React.FC = () => {
                       type="button"
                       onClick={() => setBookingStep(2)}
                       disabled={!selectedBarbershopId}
-                      className={`relative px-4 py-2 rounded-md text-white text-sm ${!selectedBarbershopId ? 'bg-amber-300 cursor-not-allowed' : 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500'} overflow-hidden group`}
+                      className={`px-4 py-2 rounded-xl text-white text-sm font-bold transition-all duration-300 ${!selectedBarbershopId ? 'bg-gray-600 cursor-not-allowed' : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 shadow-lg hover:shadow-cyan-500/50'}`}
                     >
                       <span className="relative z-10">Continuar</span>
                       <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -2478,48 +2481,48 @@ const Dashboard: React.FC = () => {
         {/* Profile Modal */}
         {showProfileModal && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/40" onClick={() => setShowProfileModal(false)} aria-hidden />
-            <div className="relative z-50 w-full max-w-md sm:max-w-lg md:max-w-xl bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 sm:rounded-2xl rounded-t-2xl shadow-2xl p-4 sm:p-6 border border-amber-500/20 max-h-[90vh] overflow-auto text-white">
+            <div className="fixed inset-0 bg-black/60" onClick={() => setShowProfileModal(false)} aria-hidden />
+            <div className="relative z-50 w-full max-w-md sm:max-w-lg md:max-w-xl bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 sm:rounded-2xl rounded-t-2xl shadow-2xl p-4 sm:p-6 border border-gray-600 max-h-[90vh] overflow-auto text-white">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500">Atualizar meus dados</h3>
+                <h3 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-400">Atualizar meus dados</h3>
                 <button onClick={() => setShowProfileModal(false)} className="text-gray-300 hover:text-white" aria-label="Fechar">✕</button>
               </div>
               <div className="space-y-4">
                 {/* Nome */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-200">Nome</label>
+                  <label className="block text-xs font-medium text-gray-300">Nome</label>
                   <div className="mt-1 relative">
                     <input
                       type="text"
                       value={profileNome}
                       onChange={(e)=>setProfileNome(e.target.value)}
-                      className="block w-full rounded-lg bg-gray-700 border border-gray-600 px-3 py-2 text-sm text-white shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      className="block w-full rounded-lg border border-gray-600 bg-gray-700 text-white px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500"
                       placeholder="Seu nome completo"
                     />
                   </div>
                   {profileNome.trim().length > 0 && profileNome.trim().length < 2 && (
-                    <p className="mt-1 text-xs text-red-500">Informe ao menos 2 caracteres.</p>
+                    <p className="mt-1 text-xs text-red-400">Informe ao menos 2 caracteres.</p>
                   )}
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-200">Email</label>
+                  <label className="block text-xs font-medium text-gray-300">Email</label>
                   <input
                     type="email"
                     value={profileEmail}
                     onChange={(e)=>setProfileEmail(e.target.value)}
-                    className={`mt-1 block w-full rounded-lg bg-gray-700 border px-3 py-2 text-sm text-white shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent ${profileEmail && !emailRegex.test(profileEmail.trim()) ? 'border-red-600' : 'border-gray-600'}`}
+                    className={`mt-1 block w-full rounded-lg border bg-gray-700 text-white px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500 ${profileEmail && !emailRegex.test(profileEmail.trim()) ? 'border-red-400' : 'border-gray-600'}`}
                     placeholder="seuemail@exemplo.com"
                   />
                   {profileEmail && !emailRegex.test(profileEmail.trim()) && (
-                    <p className="mt-1 text-xs text-red-500">Email inválido.</p>
+                    <p className="mt-1 text-xs text-red-400">Email inválido.</p>
                   )}
                 </div>
 
                 {/* Telefone */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-200">Telefone (opcional)</label>
+                  <label className="block text-xs font-medium text-gray-300">Telefone (opcional)</label>
                   <input
                     type="tel"
                     value={formatPhoneBR(profileTelefone)}
@@ -2529,7 +2532,7 @@ const Dashboard: React.FC = () => {
                     placeholder="(11) 98888-7777"
                   />
                   {profileTelefone && (onlyDigits(profileTelefone).length < 10 || onlyDigits(profileTelefone).length > 11) && (
-                    <p className="mt-1 text-xs text-red-500">Informe um telefone com DDD (10 ou 11 dígitos).</p>
+                    <p className="mt-1 text-xs text-red-400">Informe um telefone com DDD (10 ou 11 dígitos).</p>
                   )}
                 </div>
 
