@@ -1,12 +1,15 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { barbershopService, barberService, serviceService, bookingService } from '../services/api';
+import { barbershopService, barberService, serviceService, bookingService, evaluationService } from '../services/api';
+import { formatPhoneBR } from '../utils/phone';
 import type { Barbearia, Barbeiro, ServiceItem, BookingForm } from '../types';
 import { isValidTimeHHMM } from '../utils/validation';
+import { useToast } from '../hooks/useToast';
+import Toast from './Toast';
 
 const BookingService: React.FC = () => {
   const navigate = useNavigate();
+  const { toasts, removeToast, error: showError, warning } = useToast();
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedBarbershopId, setSelectedBarbershopId] = useState<number | ''>('');
   const [barbershops, setBarbershops] = useState<Barbearia[]>([]);
@@ -16,6 +19,10 @@ const BookingService: React.FC = () => {
   const [availableBarbers, setAvailableBarbers] = useState<Barbeiro[] | null>(null);
   const [isLoadingBarbers, setIsLoadingBarbers] = useState(false);
   const [barbersError, setBarbersError] = useState<string | null>(null);
+  // Reviews cache for barbers (id_barbeiro -> {average,total})
+  const [barberReviewsMap, setBarberReviewsMap] = useState<Record<number, { average: number | null; total: number }>>({});
+  // Reviews cache for barbershops (id_barbearia -> {average,total})
+  const [barbershopReviewsMap, setBarbershopReviewsMap] = useState<Record<number, { average: number | null; total: number }>>({});
   
   const [availableServices, setAvailableServices] = useState<ServiceItem[] | null>(null);
   const [isLoadingServices, setIsLoadingServices] = useState(false);
@@ -30,6 +37,7 @@ const BookingService: React.FC = () => {
   });
   const [bookingDurationMinutes, setBookingDurationMinutes] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     loadBarbershops();
@@ -41,6 +49,20 @@ const BookingService: React.FC = () => {
     try {
       const data = await barbershopService.list();
       setBarbershops(data);
+      // fetch barbershop review summaries
+      try {
+        const ids = (data || []).map((s: any) => Number(s.id_barbearia)).filter((x: number) => Number.isFinite(x) && x > 0);
+        const idsToFetch = ids.filter((i: number) => !(i in barbershopReviewsMap));
+        if (idsToFetch.length > 0) {
+          const results = await Promise.allSettled(idsToFetch.map((id) => evaluationService.listByBarbershop(id)));
+          const next: Record<number, { average: number | null; total: number }> = {};
+          results.forEach((res, idx) => {
+            const id = idsToFetch[idx];
+            if (res.status === 'fulfilled' && res.value) next[id] = { average: res.value.average ?? null, total: res.value.total ?? 0 };
+          });
+          if (Object.keys(next).length > 0) setBarbershopReviewsMap((p) => ({ ...p, ...next }));
+        }
+      } catch {}
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Erro ao carregar barbearias.';
       setBarbershopError(msg);
@@ -60,6 +82,20 @@ const BookingService: React.FC = () => {
     try {
       const barbers = await barberService.listByBarbershop(id, { onlyActive: true });
       setAvailableBarbers(barbers || []);
+      // fetch barber review summaries for these barbers
+      try {
+        const ids = (barbers || []).map((b: any) => Number((b as any).id_barbeiro)).filter((x) => Number.isFinite(x) && x > 0);
+        const idsToFetch = ids.filter((i) => !(i in barberReviewsMap));
+        if (idsToFetch.length > 0) {
+          const results = await Promise.allSettled(idsToFetch.map((bid) => evaluationService.listByBarber(bid)));
+          const next: Record<number, { average: number | null; total: number }> = {};
+          results.forEach((res, idx) => {
+            const bid = idsToFetch[idx];
+            if (res.status === 'fulfilled' && res.value) next[bid] = { average: res.value.average ?? null, total: res.value.total ?? 0 };
+          });
+          if (Object.keys(next).length > 0) setBarberReviewsMap((p) => ({ ...p, ...next }));
+        }
+      } catch {}
     } catch (err: any) {
       setBarbersError(err?.response?.data?.message || err?.message || 'Erro ao carregar barbeiros.');
     } finally {
@@ -69,7 +105,6 @@ const BookingService: React.FC = () => {
     try {
       const services = await serviceService.listByBarbershop(id);
       setAvailableServices(services || []);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setServicesError(err?.response?.data?.message || err?.message || 'Erro ao carregar serviços.');
     } finally {
@@ -83,7 +118,8 @@ const BookingService: React.FC = () => {
     const newServices = isSelected
       ? booking.service.filter((s) => s !== idStr)
       : [...booking.service, idStr];
-    setBooking({ ...booking, service: newServices });
+    // reset barber selection when services change to avoid incompatible barber
+    setBooking({ ...booking, service: newServices, barber_id: '' });
     
     const allServices = availableServices || [];
     const selectedServices = allServices.filter((s) => newServices.includes(String(s.id)));
@@ -93,44 +129,67 @@ const BookingService: React.FC = () => {
 
   const handleSubmit = async () => {
     if (booking.service.length === 0) {
-      alert('Selecione pelo menos um serviço.');
+      warning('Selecione pelo menos um serviço.');
       return;
     }
     if (!booking.date || !booking.time) {
-      alert('Informe a data e horário.');
+      warning('Informe a data e horário.');
       return;
     }
     if (!isValidTimeHHMM(booking.time)) {
-      alert('Horário inválido. Use o formato HH:MM (ex: 09:30).');
+      warning('Horário inválido. Use o formato HH:MM (ex: 09:30).');
       return;
     }
     if (!booking.barber_id) {
-      alert('Selecione um barbeiro.');
+      warning('Selecione um barbeiro.');
       return;
     }
 
     const selectedDateTime = new Date(`${booking.date}T${booking.time}`);
     const now = new Date();
     if (selectedDateTime < now) {
-      alert('Não é possível agendar no passado.');
+      warning('Não é possível agendar no passado.');
       return;
     }
 
     setIsSubmitting(true);
+    
+    const payload = {
+      id_barbearia: Number(selectedBarbershopId),
+      service: booking.service,
+      date: booking.date,
+      time: booking.time,
+      barber_id: Number(booking.barber_id),
+      notes: booking.notes || undefined,
+    };
+    
+    console.log('[FRONTEND] Tentando criar agendamento:', payload);
+    
     try {
+      // Convert selected service ids (string) to service names expected by backend
+      const svcNames = (availableServices || [])
+        .filter((s) => booking.service.includes(String(s.id)))
+        .map((s) => s.nome);
+      const payloadService = svcNames.length > 0 ? svcNames : booking.service;
+
       await bookingService.create({
         id_barbearia: Number(selectedBarbershopId),
-        service: booking.service,
+        service: payloadService,
         date: booking.date,
         time: booking.time,
         barber_id: Number(booking.barber_id),
         notes: booking.notes || undefined,
       });
-      alert('Agendamento criado com sucesso!');
-      navigate('/dashboard');
+      setShowSuccessModal(true);
     } catch (err: any) {
+      console.error('[FRONTEND] Erro ao criar agendamento:', err);
+      console.error('[FRONTEND] Response completa:', err?.response);
+      console.error('[FRONTEND] Response data:', err?.response?.data);
+      console.error('[FRONTEND] Status HTTP:', err?.response?.status);
+      console.error('[FRONTEND] Payload enviado:', payload);
+      
       const msg = err?.response?.data?.message || err?.message || 'Erro ao criar agendamento.';
-      alert(msg);
+      showError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -224,6 +283,32 @@ const BookingService: React.FC = () => {
                         <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors mb-2">
                           {shop.nome}
                         </h3>
+                        {/* Ratings */}
+                        {(() => {
+                          const rev = barbershopReviewsMap[Number(shop.id_barbearia)];
+                          if (!rev || (rev.average === null && rev.total === 0)) {
+                            return <p className="text-xs text-gray-400 mb-1">Sem avaliações</p>;
+                          }
+                          const avg = Number.isFinite(Number(rev.average)) ? Number(rev.average) : null;
+                          return (
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-0.5">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <svg
+                                    key={i}
+                                    className={`w-4 h-4 ${avg !== null && i < Math.round(avg) ? 'text-yellow-400' : 'text-white/40'}`}
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.287 3.957c.3.921-.755 1.688-1.54 1.118l-3.37-2.448a1 1 0 00-1.176 0l-3.37 2.448c-.785.57-1.84-.197-1.54-1.118l1.287-3.957a1 1 0 00-.364-1.118L2.07 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.957z" />
+                                  </svg>
+                                ))}
+                              </div>
+                              <span className="text-xs tabular-nums text-amber-200 font-semibold">{avg !== null ? avg.toFixed(1) : '-'}</span>
+                              <span className="text-xs text-gray-400">({rev.total})</span>
+                            </div>
+                          );
+                        })()}
                         {shop.endereco && (
                           <p className="text-sm text-gray-400 mb-1 flex items-start gap-2">
                             <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -366,7 +451,12 @@ const BookingService: React.FC = () => {
             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
               <h2 className="text-xl font-bold text-amber-400 mb-4">Escolha o Barbeiro</h2>
               
-              {isLoadingBarbers ? (
+              {/* Only show barbers after selecting at least one service */}
+              {booking.service.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-400">Selecione primeiro ao menos um serviço para ver os barbeiros disponíveis.</p>
+                </div>
+              ) : isLoadingBarbers ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500" />
                 </div>
@@ -379,49 +469,118 @@ const BookingService: React.FC = () => {
                   Nenhum barbeiro disponível.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {availableBarbers.map((barber) => (
-                    <label
-                      key={barber.id_barbeiro}
-                      className={`block bg-gray-700 rounded-lg p-4 border-2 cursor-pointer transition-all ${
-                        booking.barber_id === barber.id_barbeiro
-                          ? 'border-amber-500 bg-amber-500/10'
-                          : 'border-gray-600 hover:border-gray-500'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="barber"
-                        checked={booking.barber_id === barber.id_barbeiro}
-                        onChange={() => setBooking({ ...booking, barber_id: barber.id_barbeiro || 0 })}
-                          className="w-5 h-5 text-amber-500 bg-gray-600 border-gray-500 focus:ring-amber-500 focus:ring-2"
-                        />
-                        <div className="flex items-center gap-3 flex-1">
-                          {barber.avatar_url ? (
-                            <img
-                              src={barber.avatar_url}
-                              alt={barber.nome}
-                              className="w-12 h-12 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-white font-bold">
-                              {barber.nome.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-white truncate">{barber.nome}</p>
-                            {barber.especialidades && (
-                              <p className="text-xs text-gray-400 truncate">
-                                {barber.especialidades}
-                              </p>
-                            )}
-                          </div>
-                        </div>
+                (() => {
+                  // derive selected service names from availableServices + booking.service (ids)
+                  const selectedServiceNames = (availableServices || [])
+                    .filter((s) => booking.service.includes(String(s.id)))
+                    .map((s) => s.nome || '')
+                    .filter(Boolean);
+                  const filteredBarbers = selectedServiceNames.length > 0
+                    ? (availableBarbers || []).filter((b) => {
+                        const specs = new Set(
+                          (b.especialidades || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)
+                        );
+                        return selectedServiceNames.map((n) => n.trim().toLowerCase()).every((n) => specs.has(n));
+                      })
+                    : (availableBarbers || []);
+
+                  if ((filteredBarbers || []).length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <p className="text-gray-400">Nenhum barbeiro disponível para os serviços selecionados.</p>
                       </div>
-                    </label>
-                  ))}
-                </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {filteredBarbers.map((barber) => (
+                        <label
+                          key={barber.id_barbeiro}
+                          className={`block bg-gray-700 rounded-lg p-4 border-2 cursor-pointer transition-all ${
+                            booking.barber_id === barber.id_barbeiro
+                              ? 'border-amber-500 bg-amber-500/10'
+                              : 'border-gray-600 hover:border-gray-500'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="radio"
+                              name="barber"
+                              checked={booking.barber_id === barber.id_barbeiro}
+                              onChange={() => setBooking({ ...booking, barber_id: barber.id_barbeiro || 0 })}
+                              className="w-5 h-5 text-amber-500 bg-gray-600 border-gray-500 focus:ring-amber-500 focus:ring-2"
+                            />
+                            <div className="flex items-center gap-3 flex-1">
+                              {barber.avatar_url ? (
+                                <img
+                                  src={barber.avatar_url}
+                                  alt={barber.nome}
+                                  className="w-12 h-12 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-white font-bold">
+                                  {barber.nome.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-white truncate">{barber.nome}</p>
+                                {barber.especialidades && (
+                                  <p className="text-xs text-gray-400 truncate">
+                                    {barber.especialidades}
+                                  </p>
+                                )}
+                                {/* Barber Ratings */}
+                                {(() => {
+                                  const rev = barberReviewsMap[Number(barber.id_barbeiro)];
+                                  if (!rev || (rev.average === null && rev.total === 0)) {
+                                    return <p className="text-xs text-gray-400 mt-1">Sem avaliações</p>;
+                                  }
+                                  const avg = Number.isFinite(Number(rev.average)) ? Number(rev.average) : null;
+                                  return (
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <div className="flex items-center gap-0.5">
+                                        {Array.from({ length: 5 }).map((_, i) => (
+                                          <svg
+                                            key={i}
+                                            className={`w-3 h-3 ${avg !== null && i < Math.round(avg) ? 'text-yellow-400' : 'text-white/40'}`}
+                                            viewBox="0 0 20 20"
+                                            fill="currentColor"
+                                          >
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.287 3.957c.3.921-.755 1.688-1.54 1.118l-3.37-2.448a1 1 0 00-1.176 0l-3.37 2.448c-.785.57-1.84-.197-1.54-1.118l1.287-3.957a1 1 0 00-.364-1.118L2.07 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.957z" />
+                                          </svg>
+                                        ))}
+                                      </div>
+                                      <span className="text-xs tabular-nums text-amber-200 font-semibold">{avg !== null ? avg.toFixed(1) : '-'}</span>
+                                      <span className="text-xs text-gray-400">({rev.total})</span>
+                                    </div>
+                                  );
+                                })()}
+                                    {/* Contact info */}
+                                    {barber.telefone && (
+                                      <p className="text-xs text-gray-300 mt-1 flex items-center gap-2">
+                                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                        </svg>
+                                        <span>{formatPhoneBR(barber.telefone)}</span>
+                                      </p>
+                                    )}
+                                    {barber.email && (
+                                      <p className="text-xs text-gray-300 mt-0.5 flex items-center gap-2">
+                                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m0 0v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8m18 0L12 13 3 8" />
+                                        </svg>
+                                        <span className="truncate">{barber.email}</span>
+                                      </p>
+                                    )}
+                              </div>
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  );
+                })()
               )}
             </div>
 
@@ -459,6 +618,60 @@ const BookingService: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map((toast) => (
+          <Toast
+            key={toast.id}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => removeToast(toast.id)}
+          />
+        ))}
+      </div>
+
+      {/* Modal de Sucesso */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-2xl p-8 max-w-md w-full border-2 border-green-500/30 shadow-2xl shadow-green-500/20 animate-[fadeInUp_0.3s_ease-out]">
+            {/* Ícone de Sucesso */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-green-600 to-emerald-700 rounded-full p-4">
+                  <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Título e Mensagem */}
+            <h3 className="text-2xl font-bold text-center mb-3 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+              Solicitação Enviada!
+            </h3>
+            <p className="text-gray-300 text-center mb-2 leading-relaxed">
+              Seu pedido de agendamento foi enviado com sucesso!
+            </p>
+            <p className="text-gray-400 text-center mb-2 text-sm leading-relaxed">
+              Agora é só aguardar a <span className="text-amber-400 font-semibold">confirmação do barbeiro</span>.
+            </p>
+            <p className="text-gray-500 text-center mb-8 text-xs leading-relaxed">
+              Você pode acompanhar o status do seu agendamento na próxima tela.
+            </p>
+
+            {/* Botão */}
+            <button
+              onClick={() => navigate('/my-appointments')}
+              className="group relative w-full bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-green-500/50 hover:-translate-y-0.5 overflow-hidden"
+            >
+              <span className="relative z-10">Entendido!</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

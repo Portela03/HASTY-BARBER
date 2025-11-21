@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { authService } from '../services/api'; // ✅ usa o mesmo service que funcionava
+import { authService } from '../services/api';
 import type { LoginData } from '../types';
- 
+
 const Login: React.FC = () => {
   const [formData, setFormData] = useState<LoginData>({
     email: '',
@@ -11,10 +11,10 @@ const Login: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
- 
+
   const { login } = useAuth();
   const navigate = useNavigate();
- 
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -22,12 +22,12 @@ const Login: React.FC = () => {
       [name]: value,
     }));
   };
- 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
- 
+
     try {
       const response = await authService.login(formData);
       login(response.token, response.usuario);
@@ -42,7 +42,7 @@ const Login: React.FC = () => {
       setIsLoading(false);
     }
   };
- 
+
   return (
     <div className="min-h-screen flex login-screen">
       {/* Lado esquerdo - imagem e texto */}
@@ -67,53 +67,29 @@ const Login: React.FC = () => {
               Gerencie seus agendamentos com praticidade e eficiência.
             </p>
           </div>
- 
-          <div className="space-y-4 mt-8">
+
+          <div className="space-y-4 mt-6 text-gray-200">
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
               <div>
                 <p className="font-semibold">Agendamentos Inteligentes</p>
-                <p className="text-sm text-gray-400">
-                  Sistema automatizado de reservas
-                </p>
+                <p className="text-sm text-gray-300">Sistema automatizado de reservas</p>
               </div>
             </div>
- 
+
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div>
                 <p className="font-semibold">Controle Total</p>
-                <p className="text-sm text-gray-400">
-                  Gerencie horários e barbeiros
-                </p>
+                <p className="text-sm text-gray-300">Gerencie horários e barbeiros</p>
               </div>
             </div>
           </div>
@@ -261,11 +237,13 @@ const Login: React.FC = () => {
                 </a>
               </p>
             </div>
-          </form>
+          </div>
         </div>
       </div>
+
+      <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
     </div>
   );
 };
- 
+
 export default Login;

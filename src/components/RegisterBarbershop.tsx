@@ -19,20 +19,25 @@ const RegisterBarbershop: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
+  const goBack = () => {
+    try {
+      const canGoBack = typeof window !== 'undefined' && window.history && window.history.length > 1;
+      if (canGoBack) navigate(-1);
+      else navigate('/dashboard');
+    } catch {
+      navigate('/dashboard');
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    // format phone fields visually
+    const { name, value } = e.target as HTMLInputElement | HTMLTextAreaElement;
     if (name === 'telefone_contato' || name === 'proprietario_telefone') {
       setFormData((prev: RegisterBarbershopData) => ({ ...prev, [name]: formatPhoneBR(value) } as any));
     } else {
-      setFormData((prev: RegisterBarbershopData) => ({
-        ...prev,
-        [name]: value,
-      }));
+      setFormData((prev: RegisterBarbershopData) => ({ ...prev, [name]: value }));
     }
   };
 
@@ -53,7 +58,6 @@ const RegisterBarbershop: React.FC = () => {
       return;
     }
 
-    // Validate phone fields
     if (!isValidPhoneBR(formData.telefone_contato)) {
       setError('Informe um telefone de contato válido com DDD (10 ou 11 dígitos).');
       setIsLoading(false);
@@ -66,12 +70,12 @@ const RegisterBarbershop: React.FC = () => {
     }
 
     try {
-      // normalize phones to digits-only
       const payload: RegisterBarbershopData = {
         ...formData,
         telefone_contato: normalizePhoneToDigits(formData.telefone_contato) ?? '',
         proprietario_telefone: normalizePhoneToDigits(formData.proprietario_telefone) ?? '',
-      };
+      } as RegisterBarbershopData;
+
       const response = await registerService.registerBarbershop(payload);
       login(response.token, response.proprietario);
       navigate('/dashboard');

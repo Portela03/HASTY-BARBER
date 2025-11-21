@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
+import Toast from './Toast';
 import type { BookingForm, BookingRequest, BookingResponse, Barbearia, Barbeiro, User } from '../types';
-import { bookingService, barbershopService, barberService, uploadService, evaluationService, rescheduleService, serviceService, userService, clearFinalizadosGlobal, clearFinalizadosBarbearia, clearFinalizadosBarbeiro, getBarbeariaConfig } from '../services/api';
+import { bookingService, barbershopService, barberService, uploadService, evaluationService, rescheduleService, serviceService, userService, clearFinalizadosGlobal, getBarbeariaConfig } from '../services/api';
 import { timeToMinutes, isValidTimeHHMM } from '../utils/validation';
 import type { ServiceItem } from '../types';
 import type { ReviewTarget } from '../types';
@@ -10,6 +12,7 @@ import type { ReviewTarget } from '../types';
 const Dashboard: React.FC = () => {
   const { user, token, login, logout } = useAuth();
   const navigate = useNavigate();
+  const { toasts, removeToast, success, error: showError, warning, info } = useToast();
 
   // Booking panel state
   const [showBooking, setShowBooking] = useState(false);
@@ -23,7 +26,7 @@ const Dashboard: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [barbershops, setBarbershops] = useState<Barbearia[]>([]);
   const [isLoadingBarbershops, setIsLoadingBarbershops] = useState(false);
-  const [barbershopError, setBarbershopError] = useState<string | null>(null);
+  const [barbershopError, _setBarbershopError] = useState<string | null>(null);
   const [selectedBarbershopId, setSelectedBarbershopId] = useState<number | ''>('');
   const [bookingStep, setBookingStep] = useState<1 | 2>(1);
   const [availableBarbers, setAvailableBarbers] = useState<Barbeiro[] | null>(null);
@@ -48,17 +51,14 @@ const Dashboard: React.FC = () => {
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   // Slide-over: Agendamentos da Barbearia (para barbeiro/proprietário)
-  const [showShopBookings, setShowShopBookings] = useState(false);
   const [selectedShopId, setSelectedShopId] = useState<number | ''>('');
-  const [shopBookingsTab, setShopBookingsTab] = useState<'pendentes' | 'confirmados' | 'finalizados'>('pendentes');
   const [shopBookings, setShopBookings] = useState<BookingResponse[] | null>(null);
-  const [isLoadingShopBookings, setIsLoadingShopBookings] = useState(false);
-  const [shopBookingsError, setShopBookingsError] = useState<string | null>(null);
-  const [shopConfirmingId, setShopConfirmingId] = useState<number | null>(null);
-  const [shopFinalizingId, setShopFinalizingId] = useState<number | null>(null);
-  const [shopCancellingId, setShopCancellingId] = useState<number | null>(null);
-  // For role "barbeiro": track my own id_barbeiro to filter shop bookings
-  const [myBarberId, setMyBarberId] = useState<number | null>(null);
+  // keep a reference to avoid unused-variable lint where dashboard only updates shopBookings
+  useEffect(() => { void shopBookings; }, [shopBookings]);
+  // For role "barbeiro": track my own id_barbeiro to filter shop bookings (not used in dashboard)
+
+  // Counts for shop bookings tabs (used in labels)
+  // counts are computed where needed in bookings pages; keep `shopBookings` state for shared updates
   // For header avatar when session is barber: fallback to barber entity photo
   // (removido) fallback de avatar do barbeiro via localStorage
   // Hidden finalized bookings (local clear), persisted in localStorage
@@ -95,6 +95,16 @@ const Dashboard: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   // removed showInactive toggle per request
   const [uploadingUserAvatar, setUploadingUserAvatar] = useState(false);
+  
+  // Modal states for custom confirmations and success messages
+  const [showSuccessBarberModal, setShowSuccessBarberModal] = useState(false);
+  const [showDeleteBarberModal, setShowDeleteBarberModal] = useState(false);
+  const [barberToDelete, setBarberToDelete] = useState<number | null>(null);
+  const [showDeleteServiceModal, setShowDeleteServiceModal] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<{ id: number; nome: string } | null>(null);
+  const [showConfirmBookingModal, setShowConfirmBookingModal] = useState(false);
+  const [showCancelBookingModal, setShowCancelBookingModal] = useState(false);
+  const [bookingToCancelShop, setBookingToCancelShop] = useState<number | null>(null);
   const fileInputUserRef = React.useRef<HTMLInputElement | null>(null);
   // Profile modal
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -176,7 +186,7 @@ const Dashboard: React.FC = () => {
       } catch {}
     }
     if (!shopId) {
-      alert('Nenhuma barbearia encontrada para editar.');
+      showError('Nenhuma barbearia encontrada para editar.');
       return;
     }
     const shop = barbershops.find(b => b.id_barbearia === shopId);
@@ -189,9 +199,9 @@ const Dashboard: React.FC = () => {
     setShowBarbershopModal(true);
   };
   const handleSaveBarbershop = async () => {
-    if (!selectedShopId) { alert('Nenhuma barbearia selecionada.'); return; }
+    if (!selectedShopId) { warning('Nenhuma barbearia selecionada.'); return; }
     const nome = bsNome.trim();
-    if (nome.length < 2) { alert('Informe um nome válido para a barbearia.'); return; }
+    if (nome.length < 2) { warning('Informe um nome válido para a barbearia.'); return; }
     setIsUpdatingBarbershop(true);
     try {
       const telDigits = onlyDigits(bsTelefone);
@@ -204,10 +214,10 @@ const Dashboard: React.FC = () => {
       // Atualiza lista local de barbearias
       setBarbershops(prev => (prev || []).map(b => b.id_barbearia === updated.id_barbearia ? updated : b));
       setShowBarbershopModal(false);
-      alert('Dados da barbearia atualizados.');
+      success('Dados da barbearia atualizados.');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Erro ao atualizar barbearia.';
-      alert(msg);
+      showError(msg);
     } finally {
       setIsUpdatingBarbershop(false);
     }
@@ -216,8 +226,8 @@ const Dashboard: React.FC = () => {
     if (!user) return;
     const nome = profileNome.trim();
     const email = profileEmail.trim();
-    if (nome.length < 2) { alert('Informe um nome válido.'); return; }
-    if (!emailRegex.test(email)) { alert('Informe um email válido.'); return; }
+    if (nome.length < 2) { warning('Informe um nome válido.'); return; }
+    if (!emailRegex.test(email)) { warning('Informe um email válido.'); return; }
     setIsUpdatingProfile(true);
     try {
       const telDigits = onlyDigits(profileTelefone);
@@ -229,7 +239,7 @@ const Dashboard: React.FC = () => {
         login(token, merged);
       }
       setShowProfileModal(false);
-      alert('Dados atualizados.');
+      success('Dados atualizados.');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Erro ao atualizar dados.';
       alert(msg);
@@ -269,7 +279,7 @@ const Dashboard: React.FC = () => {
         }
 
         if (!id_barbeiro) {
-          alert('Não foi possível identificar seu cadastro de barbeiro para atualizar a foto.');
+          showError('Não foi possível identificar seu cadastro de barbeiro para atualizar a foto.');
           return;
         }
 
@@ -302,7 +312,7 @@ const Dashboard: React.FC = () => {
               : bk
           ));
         });
-        alert('Foto atualizada.');
+        success('Foto atualizada.');
       } else {
         // Cliente (ou outros tipos suportados): atualiza avatar do usuário
         const res = await uploadService.uploadUserAvatar(file);
@@ -320,10 +330,10 @@ const Dashboard: React.FC = () => {
               : bk
           ));
         });
-        alert('Foto atualizada.');
+        success('Foto atualizada.');
       }
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Falha ao enviar foto.');
+      showError(err?.response?.data?.message || err?.message || 'Falha ao enviar foto.');
     } finally {
       setUploadingUserAvatar(false);
       if (fileInputUserRef.current) fileInputUserRef.current.value = '';
@@ -365,91 +375,29 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleCancelBooking = async (id: number) => {
-    if (!window.confirm('Deseja cancelar este agendamento?')) return;
-    setCancellingId(id);
+  const openCancelBookingModal = (id: number) => {
+    setBookingToCancelShop(id);
+    setShowCancelBookingModal(true);
+  };
+
+  const executeCancelBooking = async () => {
+    if (!bookingToCancelShop) return;
+    setShowCancelBookingModal(false);
+    setCancellingId(bookingToCancelShop);
     try {
-      await bookingService.cancel(id);
+      await bookingService.cancel(bookingToCancelShop);
       await loadBookings();
+      success('Agendamento cancelado com sucesso!');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Erro ao cancelar agendamento.';
-      alert(msg);
+      showError(msg);
     } finally {
       setCancellingId(null);
+      setBookingToCancelShop(null);
     }
   };
 
-  const loadShopBookings = async (barbeariaId: number) => {
-    setIsLoadingShopBookings(true);
-    setShopBookingsError(null);
-    try {
-      const list = await bookingService.listByBarbershop(barbeariaId);
-      setShopBookings(list);
-    } catch (err: any) {
-      const fallback = user?.tipo_usuario === 'barbeiro' ? 'Erro ao carregar agendamentos do barbeiro.' : 'Erro ao carregar agendamentos da barbearia.';
-      const msg = err?.response?.data?.message || err?.message || fallback;
-      setShopBookingsError(msg);
-    } finally {
-      setIsLoadingShopBookings(false);
-    }
-  };
-
-  const handleOpenShopBookings = async () => {
-    setShowShopBookings(true);
-    setMyBarberId(null);
-    // Carregar barbearias do usuário e abrir direto na primeira disponível
-    setIsLoadingBarbershops(true);
-    setBarbershopError(null);
-    try {
-      let data: Barbearia[] = [];
-      try {
-        data = await barbershopService.listMine();
-      } catch {
-        data = await barbershopService.list();
-      }
-      setBarbershops(data);
-      const first = data[0];
-      if (first) {
-        setSelectedShopId(first.id_barbearia);
-        // Load barbershop reviews summary
-        try {
-          const r = await evaluationService.listByBarbershop(first.id_barbearia);
-          setShopReviews(r);
-        } catch {}
-  // If logged as barber, resolve my id_barbeiro in this shop to filter
-        if (user?.tipo_usuario === 'barbeiro') {
-          try {
-            const list = await barberService.listByBarbershop(first.id_barbearia, { onlyActive: false });
-            const me = (list || []).find((bb: any) => bb?.id_usuario === user.id_usuario);
-            setMyBarberId(me?.id_barbeiro ?? null);
-            setMyBarberReviews(null);
-            if (me?.id_barbeiro) {
-              try {
-                const rv = await evaluationService.listByBarber(me.id_barbeiro);
-                setMyBarberReviews({ average: rv?.average ?? null, total: rv?.total ?? 0 });
-              } catch {
-                setMyBarberReviews(null);
-              }
-            }
-          } catch (e) {
-            // ignore; fallback will show empty if id not found
-            setMyBarberId(null);
-            setMyBarberReviews(null);
-          }
-        }
-        await loadShopBookings(first.id_barbearia);
-        try { await loadRescheduleRequests(first.id_barbearia); } catch {}
-      } else {
-        setSelectedShopId('');
-        setShopBookings([]);
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Erro ao carregar barbearias.';
-      setBarbershopError(msg);
-    } finally {
-      setIsLoadingBarbershops(false);
-    }
-  };
+  
 
   // Resolve barber avatar for header when session is a barber and user avatar is missing
   useEffect(() => {
@@ -492,36 +440,11 @@ const Dashboard: React.FC = () => {
     resolveBarberAvatar();
   }, [user?.tipo_usuario, user?.avatar_url, user?.id_usuario]);
 
-  const handleShopConfirm = async (id: number) => {
-    setShopConfirmingId(id);
-    try {
-      await bookingService.confirm(id);
-      if (selectedShopId) await loadShopBookings(Number(selectedShopId));
-    } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Erro ao confirmar.');
-    } finally {
-      setShopConfirmingId(null);
-    }
-  };
-
-  // Reviews summary for current selected shop
-  const [shopReviews, setShopReviews] = useState<{ average: number | null; total: number; items?: any[] } | null>(null);
   // Reviews summary per barber (id_barbeiro -> {average,total})
   const [barberReviewsMap, setBarberReviewsMap] = useState<Record<number, { average: number | null; total: number }>>({});
-  // Reviews summary for logged barber (when session is barber)
-  const [myBarberReviews, setMyBarberReviews] = useState<{ average: number | null; total: number } | null>(null);
-  useEffect(() => {
-    const load = async () => {
-      if (!selectedShopId) return;
-      try {
-        const r = await evaluationService.listByBarbershop(Number(selectedShopId));
-        setShopReviews(r);
-      } catch {
-        setShopReviews(null);
-      }
-    };
-    load();
-  }, [selectedShopId]);
+
+  // Reviews summary per barbershop (id_barbearia -> {average,total})
+  const [barbershopReviewsMap, setBarbershopReviewsMap] = useState<Record<number, { average: number | null; total: number }>>({});
 
   // When barbers list loads, fetch individual review summaries per barber
   useEffect(() => {
@@ -580,84 +503,32 @@ const Dashboard: React.FC = () => {
     fetchAvailableBarberReviews();
   }, [availableBarbers, barberReviewsMap]);
 
-  // Load reschedule requests when shop changes
-  const [rescheduleRequests, setRescheduleRequests] = useState<any[] | null>(null);
-  const [isLoadingRescheduleRequests, setIsLoadingRescheduleRequests] = useState(false);
-  const [rescheduleActionId, setRescheduleActionId] = useState<number | null>(null);
-  const loadRescheduleRequests = async (barbeariaId: number) => {
-    setIsLoadingRescheduleRequests(true);
-    try {
-      const list = await rescheduleService.listByBarbershop(barbeariaId);
-      setRescheduleRequests(list || []);
-    } catch {
-      setRescheduleRequests([]);
-    } finally {
-      setIsLoadingRescheduleRequests(false);
-    }
-  };
+  // Fetch barbershop-level review summaries when barbershops list is available
   useEffect(() => {
-    if (!selectedShopId) return;
-    loadRescheduleRequests(Number(selectedShopId));
-  }, [selectedShopId]);
-
-  const handleShopFinalize = async (id: number) => {
-    setShopFinalizingId(id);
-    try {
-      await bookingService.finalize(id);
-      if (selectedShopId) await loadShopBookings(Number(selectedShopId));
-    } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Erro ao finalizar.');
-    } finally {
-      setShopFinalizingId(null);
-    }
-  };
-
-  const handleShopCancel = async (id: number) => {
-    if (!window.confirm('Deseja cancelar este agendamento?')) return;
-    setShopCancellingId(id);
-    try {
-      await bookingService.cancel(id);
-      if (selectedShopId) await loadShopBookings(Number(selectedShopId));
-    } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Erro ao cancelar.');
-    } finally {
-      setShopCancellingId(null);
-    }
-  };
-
-  const handleApproveReschedule = async (requestId: number) => {
-    setRescheduleActionId(requestId);
-    try {
-      await rescheduleService.approve(requestId);
-      if (selectedShopId) {
-        await loadShopBookings(Number(selectedShopId));
-        await loadRescheduleRequests(Number(selectedShopId));
+    const fetchBarbershopReviews = async () => {
+      if (!barbershops || barbershops.length === 0) return;
+      const ids = Array.from(new Set((barbershops || []).map((s) => Number(s.id_barbearia)).filter((id) => Number.isFinite(id) && id > 0)));
+      if (ids.length === 0) return;
+      const idsToFetch = ids.filter((id) => !(id in barbershopReviewsMap));
+      if (idsToFetch.length === 0) return;
+      try {
+        const results = await Promise.allSettled(idsToFetch.map((id) => evaluationService.listByBarbershop(id)));
+        const next: Record<number, { average: number | null; total: number }> = {};
+        results.forEach((res, idx) => {
+          const id = idsToFetch[idx];
+          if (res.status === 'fulfilled' && res.value) {
+            next[id] = { average: res.value.average ?? null, total: res.value.total ?? 0 };
+          }
+        });
+        if (Object.keys(next).length > 0) setBarbershopReviewsMap((prev) => ({ ...prev, ...next }));
+      } catch {
+        // ignore
       }
-      alert('Pedido aprovado.');
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Erro ao aprovar pedido.';
-      alert(msg);
-    } finally {
-      setRescheduleActionId(null);
-    }
-  };
+    };
+    fetchBarbershopReviews();
+  }, [barbershops, barbershopReviewsMap]);
 
-  const handleRejectReschedule = async (requestId: number) => {
-    setRescheduleActionId(requestId);
-    try {
-      await rescheduleService.reject(requestId);
-      if (selectedShopId) {
-        await loadShopBookings(Number(selectedShopId));
-        await loadRescheduleRequests(Number(selectedShopId));
-      }
-      alert('Pedido rejeitado.');
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Erro ao rejeitar pedido.';
-      alert(msg);
-    } finally {
-      setRescheduleActionId(null);
-    }
-  };
+  // reschedule flow is now handled in dedicated bookings pages; this dashboard keeps barber review map only
 
   // Open reschedule modal for a booking (client side)
   const openRescheduleModal = (b: BookingResponse) => {
@@ -690,13 +561,13 @@ const Dashboard: React.FC = () => {
   const handleSubmitReschedule = async () => {
     if (!rescheduleBookingId) return;
     if (!rescheduleDate || !rescheduleTime) {
-      alert('Informe data e hora desejadas.');
+      warning('Informe data e hora desejadas.');
       return;
     }
     // Optional: block past date/time
     const dt = new Date(`${rescheduleDate}T${rescheduleTime}:00`);
     if (isFinite(dt.getTime()) && dt < new Date()) {
-      alert('Escolha um horário futuro.');
+      warning('Escolha um horário futuro.');
       return;
     }
     setIsSubmittingReschedule(true);
@@ -705,16 +576,16 @@ const Dashboard: React.FC = () => {
       if (rescheduleBarberId !== '') payload.barber_id = Number(rescheduleBarberId);
       await rescheduleService.create(rescheduleBookingId, payload);
       setShowRescheduleModal(false);
-      alert('Pedido de reagendamento enviado para aprovação.');
+      success('Pedido de reagendamento enviado para aprovação.');
     } catch (err: any) {
       const status = err?.response?.status;
       const serverMsg = err?.response?.data?.message;
       const msg = serverMsg || err?.message || 'Falha ao solicitar reagendamento.';
-      if (status === 409) alert('Já existe um pedido pendente para este agendamento.');
-      else if (status === 400) alert(msg);
-      else if (status === 403) alert(msg || 'Você não pode reagendar este agendamento.');
-      else if (status === 404) alert(serverMsg || 'Recurso de reagendamento não encontrado ou agendamento inexistente. Confirme o caminho da API e o ID.');
-      else alert(msg);
+      if (status === 409) showError('Já existe um pedido pendente para este agendamento.');
+      else if (status === 400) showError(msg);
+      else if (status === 403) showError(msg || 'Você não pode reagendar este agendamento.');
+      else if (status === 404) showError(serverMsg || 'Recurso de reagendamento não encontrado ou agendamento inexistente. Confirme o caminho da API e o ID.');
+      else showError(msg);
     } finally {
       setIsSubmittingReschedule(false);
     }
@@ -788,12 +659,12 @@ const Dashboard: React.FC = () => {
   const handleSubmitReview = async () => {
     if (!reviewBookingId) return;
     if (reviewRating < 1 || reviewRating > 5) {
-      alert('Escolha uma nota de 1 a 5 estrelas.');
+      warning('Escolha uma nota de 1 a 5 estrelas.');
       return;
     }
     const comentario = reviewComment.trim();
     if (comentario.length > 1000) {
-      alert('Comentário muito longo (máx. 1000 caracteres).');
+      warning('Comentário muito longo (máx. 1000 caracteres).');
       return;
     }
     setIsSubmittingReview(true);
@@ -802,7 +673,7 @@ const Dashboard: React.FC = () => {
       // Mark as evaluated for the chosen target
       setEvaluatedKeys(prev => new Set([...Array.from(prev), `${reviewBookingId}:${reviewTarget}`]));
       setShowReviewModal(false);
-      alert('Avaliação enviada. Obrigado!');
+      success('Avaliação enviada. Obrigado!');
     } catch (err: any) {
       const status = err?.response?.status;
       const msg = err?.response?.data?.message || err?.message || 'Falha ao enviar avaliação.';
@@ -810,15 +681,15 @@ const Dashboard: React.FC = () => {
         // Já existe avaliação para esse booking/target — trata amigável e marca localmente
         setEvaluatedKeys(prev => new Set([...Array.from(prev), `${reviewBookingId}:${reviewTarget}`]));
         setShowReviewModal(false);
-        alert('Você já avaliou este destino para este agendamento.');
+        info('Você já avaliou este destino para este agendamento.');
       } else if (status === 400) {
-        alert('Agendamento ainda não finalizado. Tente novamente quando estiver finalizado.');
+        warning('Agendamento ainda não finalizado. Tente novamente quando estiver finalizado.');
       } else if (status === 403) {
-        alert('Você não pode avaliar este agendamento.');
+        showError('Você não pode avaliar este agendamento.');
       } else if (status === 404) {
-        alert('Agendamento não encontrado para avaliação.');
+        showError('Agendamento não encontrado para avaliação.');
       } else {
-        alert(msg);
+        showError(msg);
       }
     } finally {
       setIsSubmittingReview(false);
@@ -835,21 +706,7 @@ const Dashboard: React.FC = () => {
       alert(e?.message || 'Falha ao aplicar limpeza de finalizados.');
     }
   };
-  const handleClearFinalizedShop = async () => {
-    try {
-      if (user?.tipo_usuario === 'barbeiro' && myBarberId) {
-        await clearFinalizadosBarbeiro(Number(myBarberId));
-      } else if (selectedShopId) {
-        await clearFinalizadosBarbearia(Number(selectedShopId));
-      } else {
-        return;
-      }
-      setHiddenFinalizedIds(new Set());
-      if (selectedShopId) await loadShopBookings(Number(selectedShopId));
-    } catch (e: any) {
-      alert(e?.message || 'Falha ao aplicar limpeza de finalizados.');
-    }
-  };
+  // shop-specific finalizados handling moved to bookings pages
 
   // Load barbers for selected barbershop when entering booking step 2
   useEffect(() => {
@@ -987,38 +844,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleOpenBarbersPanel = async () => {
-    setShowBarbers(true);
-    setBarbersTab('gerenciar');
-    setBarbers(null);
-    // carregar barbearias e selecionar a primeira
-    setIsLoadingBarbershops(true);
-    setBarbershopError(null);
-    try {
-      let data: Barbearia[] = [];
-      try {
-        data = await barbershopService.listMine();
-      } catch {
-        data = await barbershopService.list();
-      }
-      setBarbershops(data);
-      const first = data[0];
-        if (first) {
-        setSelectedShopId(first.id_barbearia);
-        await Promise.all([
-          loadBarbers(first.id_barbearia),
-          loadServices(first.id_barbearia),
-        ]);
-      } else {
-        setSelectedShopId('');
-        setBarbers([]);
-      }
-    } catch (err: any) {
-      setBarbershopError(err?.response?.data?.message || err?.message || 'Erro ao carregar barbearias.');
-    } finally {
-      setIsLoadingBarbershops(false);
-    }
-  };
+  
 
   // Ao abrir o painel de barbeiros e trocar para a aba "cadastrar", garanta serviços carregados
   useEffect(() => {
@@ -1052,28 +878,41 @@ const Dashboard: React.FC = () => {
     const nome = serviceForm.nome.trim();
     const preco = serviceForm.preco.trim();
     if (nome.length < 2) {
-      alert('Informe um nome válido para o serviço (mínimo 2 caracteres).');
+      warning('Informe um nome válido para o serviço (mínimo 2 caracteres).');
       return;
     }
     if (!preco) {
-      alert('Informe um preço (apenas visual).');
+      warning('Informe um preço (apenas visual).');
       return;
     }
     setCreatingService(true);
     setCreateServiceError(null);
+    
+    const payload = {
+      nome,
+      preco,
+      descricao: serviceForm.descricao.trim() || undefined,
+    };
+    
+    console.log('[FRONTEND] Tentando cadastrar serviço:', payload, 'na barbearia:', selectedShopId);
+    
     try {
-      await serviceService.create(Number(selectedShopId), {
-        nome,
-        preco,
-        descricao: serviceForm.descricao.trim() || undefined,
-      });
+      const result = await serviceService.create(Number(selectedShopId), payload);
+      console.log('[FRONTEND] Serviço cadastrado com sucesso:', result);
       setServiceForm({ nome: '', preco: '', descricao: '' });
       setServicesTab('gerenciar');
       await loadServices(Number(selectedShopId));
-      alert('Serviço cadastrado com sucesso.');
+      success('Serviço cadastrado com sucesso.');
     } catch (err: any) {
+      console.error('[FRONTEND] Erro ao cadastrar serviço:', err);
+      console.error('[FRONTEND] Response completa:', err?.response);
+      console.error('[FRONTEND] Response data:', err?.response?.data);
+      console.error('[FRONTEND] Status HTTP:', err?.response?.status);
+      console.error('[FRONTEND] Payload enviado:', payload);
+      
       const msg = err?.response?.data?.message || err?.message || 'Erro ao cadastrar serviço.';
       setCreateServiceError(msg);
+      showError(msg);
     } finally {
       setCreatingService(false);
     }
@@ -1081,7 +920,7 @@ const Dashboard: React.FC = () => {
 
   const handleToggleBarber = async (id_barbeiro: number, nextAtivo: boolean) => {
     if (user?.tipo_usuario !== 'proprietario') {
-      alert('Apenas o proprietário pode alterar o status de barbeiros.');
+      warning('Apenas o proprietário pode alterar o status de barbeiros.');
       return;
     }
     if (!barbers) return;
@@ -1091,7 +930,7 @@ const Dashboard: React.FC = () => {
     const idx = prev.findIndex((b: any) => (b?.id_barbeiro) === id_barbeiro);
     if (idx === -1) {
       setTogglingBarberId(null);
-      alert('Barbeiro não encontrado na lista.');
+      showError('Barbeiro não encontrado na lista.');
       return;
     }
     const next = prev.map((b: any) => (
@@ -1101,25 +940,25 @@ const Dashboard: React.FC = () => {
     try {
       await barberService.setActive(id_barbeiro, nextAtivo);
       // sucesso: manter estado otimista
-      alert('Status atualizado.');
+      success('Status atualizado.');
     } catch (err: any) {
       // revert
       setBarbers(prev as any);
       const status = err?.response?.status;
       const msg = err?.response?.data?.message || err?.message || 'Erro ao atualizar barbeiro.';
       if (status === 401) {
-        alert(msg || 'Sessão expirada. Faça login novamente.');
+        showError(msg || 'Sessão expirada. Faça login novamente.');
         await logout();
         navigate('/login');
       } else if (status === 403) {
-        alert('Acesso negado. Apenas o proprietário pode alterar o status.');
+        showError('Acesso negado. Apenas o proprietário pode alterar o status.');
       } else if (status === 404) {
-        alert('Barbeiro não encontrado. A lista será recarregada.');
+        showError('Barbeiro não encontrado. A lista será recarregada.');
         if (selectedShopId) await loadBarbers(Number(selectedShopId));
       } else if (status === 400) {
-        alert(msg || 'Payload inválido.');
+        showError(msg || 'Payload inválido.');
       } else {
-        alert(msg || 'Erro interno. Tente novamente.');
+        showError(msg || 'Erro interno. Tente novamente.');
       }
     } finally {
       setTogglingBarberId(null);
@@ -1127,35 +966,69 @@ const Dashboard: React.FC = () => {
   };
 
   // Delete (soft-delete) a barber: set ativo = false and remove from the visible list
-  const handleDeleteBarber = async (id_barbeiro: number) => {
+  const openDeleteBarberModal = (id_barbeiro: number) => {
     if (user?.tipo_usuario !== 'proprietario') {
-      alert('Apenas o proprietário pode excluir barbeiros.');
+      warning('Apenas o proprietário pode excluir barbeiros.');
       return;
     }
-  if (!window.confirm('Deseja realmente excluir este barbeiro?')) return;
-    setTogglingBarberId(id_barbeiro);
+    setBarberToDelete(id_barbeiro);
+    setShowDeleteBarberModal(true);
+  };
+
+  const executeDeleteBarber = async () => {
+    if (!barberToDelete) return;
+    setShowDeleteBarberModal(false);
+    setTogglingBarberId(barberToDelete);
     try {
-      await barberService.setActive(id_barbeiro, false);
+      await barberService.setActive(barberToDelete, false);
       // remove from list so UI doesn't immediately show an "Ativar" button
-      setBarbers((prev) => (prev || []).filter((b: any) => Number(b?.id_barbeiro) !== Number(id_barbeiro)));
-      alert('Barbeiro excluído.');
+      setBarbers((prev) => (prev || []).filter((b: any) => Number(b?.id_barbeiro) !== Number(barberToDelete)));
+      success('Barbeiro excluído com sucesso!');
     } catch (err: any) {
       const status = err?.response?.status;
       const msg = err?.response?.data?.message || err?.message || 'Erro ao excluir barbeiro.';
       if (status === 401) {
-        alert(msg || 'Sessão expirada. Faça login novamente.');
+        showError(msg || 'Sessão expirada. Faça login novamente.');
         await logout();
         navigate('/login');
       } else if (status === 403) {
-        alert('Acesso negado. Apenas o proprietário pode excluir barbeiros.');
+        showError('Acesso negado. Apenas o proprietário pode excluir barbeiros.');
       } else if (status === 404) {
-        alert('Barbeiro não encontrado. A lista será recarregada.');
+        showError('Barbeiro não encontrado. A lista será recarregada.');
         if (selectedShopId) await loadBarbers(Number(selectedShopId));
       } else {
-        alert(msg || 'Erro interno. Tente novamente.');
+        showError(msg || 'Erro interno. Tente novamente.');
       }
     } finally {
       setTogglingBarberId(null);
+      setBarberToDelete(null);
+    }
+  };
+
+  // Service deletion handlers
+  const openDeleteServiceModal = (serviceId: number, serviceName: string) => {
+    if (!selectedShopId) {
+      warning('Selecione uma barbearia.');
+      return;
+    }
+    setServiceToDelete({ id: serviceId, nome: serviceName });
+    setShowDeleteServiceModal(true);
+  };
+
+  const executeDeleteService = async () => {
+    if (!serviceToDelete || !selectedShopId) return;
+    setShowDeleteServiceModal(false);
+    setDeletingServiceId(serviceToDelete.id);
+    try {
+      await serviceService.delete(Number(selectedShopId), serviceToDelete.id);
+      await loadServices(Number(selectedShopId));
+      success('Serviço excluído com sucesso!');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Erro ao excluir serviço.';
+      showError(msg);
+    } finally {
+      setDeletingServiceId(null);
+      setServiceToDelete(null);
     }
   };
 
@@ -1168,23 +1041,40 @@ const Dashboard: React.FC = () => {
     }
     setCreateBarberLoading(true);
     setCreateBarberError(null);
+    
+    const payload = {
+      id_barbearia: Number(selectedShopId),
+      nome: barberForm.nome,
+      email: barberForm.email,
+      telefone: barberForm.telefone.replace(/\D/g, ''),
+      senha: barberForm.senha,
+      especialidades: (barberForm.especialidades && barberForm.especialidades.length > 0)
+        ? barberForm.especialidades.join(', ')
+        : undefined,
+    };
+    
+    console.log('[FRONTEND] Tentando cadastrar barbeiro:', payload);
+    
     try {
-      await barberService.create({
-        id_barbearia: Number(selectedShopId),
-        nome: barberForm.nome,
-        email: barberForm.email,
-        telefone: barberForm.telefone.replace(/\D/g, ''),
-        senha: barberForm.senha,
-        especialidades: (barberForm.especialidades && barberForm.especialidades.length > 0)
-          ? barberForm.especialidades.join(', ')
-          : undefined,
-      });
+      const result = await barberService.create(payload);
+      console.log('[FRONTEND] Barbeiro cadastrado com sucesso:', result);
       setBarberForm({ nome: '', email: '', telefone: '', senha: '', confirmarSenha: '', especialidades: [] });
       setBarbersTab('gerenciar');
       await loadBarbers(Number(selectedShopId));
-      alert('Barbeiro cadastrado com sucesso.');
+      setShowSuccessBarberModal(true);
     } catch (err: any) {
-      setCreateBarberError(err?.response?.data?.message || err?.message || 'Erro ao cadastrar barbeiro.');
+      console.error('[FRONTEND] Erro ao cadastrar barbeiro:', err);
+      console.error('[FRONTEND] Response completa:', err?.response);
+      console.error('[FRONTEND] Response data:', err?.response?.data);
+      console.error('[FRONTEND] Status HTTP:', err?.response?.status);
+      console.error('[FRONTEND] Payload enviado:', payload);
+      
+      const errorMsg = err?.response?.data?.message 
+        || err?.response?.data?.error 
+        || err?.message 
+        || 'Erro ao cadastrar barbeiro.';
+      setCreateBarberError(errorMsg);
+      showError(errorMsg);
     } finally {
       setCreateBarberLoading(false);
     }
@@ -1320,23 +1210,7 @@ const Dashboard: React.FC = () => {
     return null;
   }
 
-  // Open the barbearia config page for onboarding (tries known id then falls back)
-  const openOnboardingConfig = async () => {
-    let id = onboarding?.barbershopId as number | undefined | null;
-    if (!id) {
-      try {
-        const mine = await barbershopService.listMine();
-        if (mine && mine[0]) id = mine[0].id_barbearia;
-      } catch {
-        try {
-          const all = await barbershopService.list();
-          if (all && all[0]) id = all[0].id_barbearia;
-        } catch {}
-      }
-    }
-    if (id) navigate(`/barbearias/${id}/config`);
-    else alert('Nenhuma barbearia encontrada para configurar.');
-  };
+  // Onboarding config navigation handled inline where needed
 
   // Helper to display the barbershop name for a booking
   const getBookingBarbershopName = (b: BookingResponse): string | undefined => {
@@ -1355,7 +1229,7 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
 
         <div className="relative bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 rounded-2xl shadow-2xl mb-6 border border-gray-600 overflow-hidden animate-[fadeInUp_0.6s_ease-out]">
@@ -1444,7 +1318,7 @@ const Dashboard: React.FC = () => {
                             }}
                           >
                             {/* user icon */}
-                            <svg className="h-5 w-5 text-gray-400 group-hover:text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <svg className="h-5 w-5 text-amber-300 group-hover:text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 1115 0v.75H4.5v-.75z" />
                             </svg>
                             <span>Meus dados</span>
@@ -1452,7 +1326,7 @@ const Dashboard: React.FC = () => {
                           {user.tipo_usuario === 'proprietario' && (
                             <>
                               <button
-                                className="group mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                                className="group mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-200 hover:bg-amber-500/10 hover:text-amber-300 transition-colors"
                                 role="menuitem"
                                 onClick={() => {
                                   setHeaderMenuOpen(false);
@@ -1460,13 +1334,13 @@ const Dashboard: React.FC = () => {
                                 }}
                               >
                                 {/* shop/building icon */}
-                                <svg className="h-5 w-5 text-gray-400 group-hover:text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                                <svg className="h-5 w-5 text-amber-300 group-hover:text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M3 9.75l9-6 9 6M4.5 10.5v9a1.5 1.5 0 001.5 1.5h12a1.5 1.5 0 001.5-1.5v-9M9 21v-6a3 3 0 016 0v6" />
                                 </svg>
                                 <span>Dados da barbearia</span>
                               </button>
                               <button
-                                className="group mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                                className="group mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-200 hover:bg-amber-500/10 hover:text-amber-300 transition-colors"
                                 role="menuitem"
                                 onClick={async () => {
                                   setHeaderMenuOpen(false);
@@ -1483,7 +1357,7 @@ const Dashboard: React.FC = () => {
                                 }}
                               >
                                 {/* cog icon */}
-                                <svg className="h-5 w-5 text-gray-400 group-hover:text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                                <svg className="h-5 w-5 text-amber-300 group-hover:text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.89 3.31.877 2.42 2.42a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.89 1.543-.877 3.31-2.42 2.42a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.89-3.31-.877-2.42-2.42a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.89-1.543.877-3.31 2.42-2.42a1.724 1.724 0 002.573-1.066z" />
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
@@ -1499,7 +1373,8 @@ const Dashboard: React.FC = () => {
                     onClick={handleLogout}
                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 hover:shadow-red-500/50 hover:-translate-y-0.5"
                   >
-                    Sair
+                    <span className="relative z-10">Sair</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                   </button>
                 </div>
               </div>
@@ -1584,27 +1459,82 @@ const Dashboard: React.FC = () => {
                     {onboarding.missingServices ? ((onboarding.missingHours || onboarding.missingBarbers) ? '• serviços' : 'serviços') : ''}
                     .
                   </p>
-                  <div className="mt-3 flex gap-2 flex-wrap">
+                    <div className="mt-3 flex gap-2 flex-wrap">
                     <button
                       type="button"
-                      onClick={openOnboardingConfig}
-                      className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-amber-600 to-yellow-600 text-white rounded-lg text-sm font-bold hover:from-amber-700 hover:to-yellow-700 transition-all duration-300 shadow-lg hover:shadow-amber-500/50"
+                      onClick={async () => {
+                        // navigate to schedule editor for current shop
+                        let id = onboarding?.barbershopId as number | undefined | null;
+                        if (!id) {
+                          try {
+                            const mine = await barbershopService.listMine();
+                            if (mine && mine[0]) id = mine[0].id_barbearia;
+                          } catch {
+                            try {
+                              const all = await barbershopService.list();
+                              if (all && all[0]) id = all[0].id_barbearia;
+                            } catch {}
+                          }
+                        }
+                        if (id) navigate(`/barbearias/${id}/config`);
+                        else alert('Nenhuma barbearia encontrada para configurar horário.');
+                      }}
+                      className="relative inline-flex items-center px-3 py-1.5 bg-amber-600 text-white rounded-md text-sm font-medium hover:bg-amber-700 overflow-hidden group"
                     >
-                      Configurar horários
+                        <span className="relative z-10 flex items-center gap-2">
+                          Definir horários
+                        </span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     </button>
+
                     <button
                       type="button"
-                      onClick={async () => { setShowBarbers(true); setBarbersTab('cadastrar'); await handleOpenBarbersPanel(); }}
-                      className="inline-flex items-center px-3 py-1.5 bg-white text-yellow-800 border border-yellow-200 rounded-md text-sm font-medium hover:bg-yellow-50"
+                      onClick={async () => {
+                        // navigate to register barber page for current shop
+                        let id = onboarding?.barbershopId as number | undefined | null;
+                        if (!id) {
+                          try {
+                            const mine = await barbershopService.listMine();
+                            if (mine && mine[0]) id = mine[0].id_barbearia;
+                          } catch {
+                            try {
+                              const all = await barbershopService.list();
+                              if (all && all[0]) id = all[0].id_barbearia;
+                            } catch {}
+                          }
+                        }
+                        if (id) navigate(`/barbearias/${id}/register-barber`);
+                        else alert('Nenhuma barbearia encontrada para cadastrar barbeiro.');
+                      }}
+                      className="relative inline-flex items-center px-3 py-1.5 bg-gray-800 text-amber-300 border border-amber-400/20 rounded-md text-sm font-medium hover:bg-amber-500/10 overflow-hidden group"
                     >
-                      Cadastrar barbeiros
+                        <span className="relative z-10 flex items-center gap-2">Cadastrar barbeiros</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/8 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     </button>
+
                     <button
                       type="button"
-                      onClick={() => { setShowServices(true); setServicesTab('cadastrar'); }}
-                      className="inline-flex items-center px-3 py-1.5 bg-white text-yellow-800 border border-yellow-200 rounded-md text-sm font-medium hover:bg-yellow-50"
+                      onClick={async () => {
+                        // navigate to register service page for current shop
+                        let id = onboarding?.barbershopId as number | undefined | null;
+                        if (!id) {
+                          try {
+                            const mine = await barbershopService.listMine();
+                            if (mine && mine[0]) id = mine[0].id_barbearia;
+                          } catch {
+                            try {
+                              const all = await barbershopService.list();
+                              if (all && all[0]) id = all[0].id_barbearia;
+                            } catch {}
+                          }
+                        }
+                        if (id) navigate(`/barbearias/${id}/register-service`);
+                        else alert('Nenhuma barbearia encontrada para cadastrar serviço.');
+                      }}
+                      className="relative inline-flex items-center px-3 py-1.5 bg-gray-800 text-amber-300 border border-amber-400/20 rounded-md text-sm font-medium hover:bg-amber-500/10 overflow-hidden group"
                     >
-                      Cadastrar serviços
+                        <span className="relative z-10 flex items-center gap-2">Cadastrar serviços</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/8 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     </button>
                   </div>
                 </div>
@@ -1613,7 +1543,7 @@ const Dashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowOnboardingBanner(false)}
-                  className="inline-flex items-center p-1 rounded-md text-yellow-300 hover:bg-yellow-800/50 transition-colors"
+                  className="inline-flex items-center p-1 rounded-md text-amber-300 hover:bg-amber-700/10"
                   aria-label="Fechar"
                 >
                   <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor">
@@ -1639,15 +1569,23 @@ const Dashboard: React.FC = () => {
                       <dl>
                         <dt className="text-sm font-medium text-gray-500 truncate">
                         </dt>
-                        <dd className="text-lg font-medium text-gray-900">
+                        <dd className="text-lg font-medium text-white">
                           <button
                             onClick={async () => {
-                              // abrir painel de barbeiros
-                              await handleOpenBarbersPanel();
+                              try {
+                                let data: Barbearia[] = [];
+                                try { data = await barbershopService.listMine(); } catch { data = await barbershopService.list(); }
+                                const first = data[0];
+                                if (first) navigate(`/barbearias/${first.id_barbearia}/register-barber`);
+                                else alert('Nenhuma barbearia encontrada.');
+                              } catch (err) {
+                                alert('Erro ao localizar barbearia.');
+                              }
                             }}
                             className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
-                            Gerenciar Barbeiros
+                            <span className="relative z-10">Cadastrar Barbeiro</span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                           </button>
                         </dd>
                       </dl>
@@ -1669,35 +1607,23 @@ const Dashboard: React.FC = () => {
                       <dl>
                         {/* título removido conforme solicitação */}
                         <dt className="text-sm font-medium text-gray-500 truncate hidden" />
-                        <dd className="text-lg font-medium text-gray-900">
+                        <dd className="text-lg font-medium text-white">
                           <button
                             onClick={async () => {
-                              setShowServices(true);
-                              setServicesTab('gerenciar');
-                              setServices(null);
-                              setIsLoadingBarbershops(true);
-                              setBarbershopError(null);
                               try {
                                 let data: Barbearia[] = [];
                                 try { data = await barbershopService.listMine(); } catch { data = await barbershopService.list(); }
-                                setBarbershops(data);
                                 const first = data[0];
-                                if (first) {
-                                  setSelectedShopId(first.id_barbearia);
-                                  await loadServices(first.id_barbearia);
-                                } else {
-                                  setSelectedShopId('');
-                                  setServices([]);
-                                }
-                              } catch (err: any) {
-                                setBarbershopError(err?.response?.data?.message || err?.message || 'Erro ao carregar barbearias.');
-                              } finally {
-                                setIsLoadingBarbershops(false);
+                                if (first) navigate(`/barbearias/${first.id_barbearia}/register-service`);
+                                else alert('Nenhuma barbearia encontrada.');
+                              } catch (err) {
+                                alert('Erro ao localizar barbearia.');
                               }
                             }}
                             className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
-                            Gerenciar Serviços
+                            <span className="relative z-10">Cadastrar Serviço</span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                           </button>
                         </dd>
                       </dl>
@@ -1718,12 +1644,23 @@ const Dashboard: React.FC = () => {
                       <dl>
                         <dt className="text-sm font-medium text-gray-500 truncate">
                         </dt>
-                        <dd className="text-lg font-medium text-gray-900">
+                        <dd className="text-lg font-medium text-white">
                           <button
-                            onClick={handleOpenShopBookings}
+                            onClick={async () => {
+                              try {
+                                let data: Barbearia[] = [];
+                                try { data = await barbershopService.listMine(); } catch { data = await barbershopService.list(); }
+                                const first = data[0];
+                                if (first) navigate(`/barbearias/${first.id_barbearia}/bookings`);
+                                else alert('Nenhuma barbearia encontrada.');
+                              } catch (err) {
+                                alert('Erro ao localizar barbearia.');
+                              }
+                            }}
                             className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
-                            Agendamentos da Barbearia
+                            <span className="relative z-10">Ver Agendamentos</span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                           </button>
                         </dd>
                       </dl>
@@ -1746,12 +1683,44 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dl>
-                        <dd className="text-lg font-medium text-gray-900">
+                        <dd className="text-lg font-medium text-white">
                           <button
-                            onClick={handleOpenShopBookings}
+                            onClick={async () => {
+                              // Try to resolve the logged user's barber id across known barbearias
+                              try {
+                                let shops: Barbearia[] = [];
+                                try { shops = await barbershopService.listMine(); } catch { shops = await barbershopService.list(); }
+                                for (const s of shops) {
+                                  try {
+                                    const list = await barberService.listByBarbershop(s.id_barbearia, { onlyActive: false });
+                                    const me = (list || []).find((b: any) => Number(b?.id_usuario) === Number(user.id_usuario));
+                                    if (me && me.id_barbeiro) {
+                                      const id = me.id_barbeiro;
+                                      navigate(`/barbeiros/${Number(id)}/bookings`);
+                                      return;
+                                    }
+                                  } catch {
+                                    // ignore and try next shop
+                                  }
+                                }
+                              } catch {
+                                // fallthrough to fallback
+                              }
+                              // Fallback: navigate to the first barbearia bookings page (remove old slide-over)
+                              try {
+                                let shops: Barbearia[] = [];
+                                try { shops = await barbershopService.listMine(); } catch { shops = await barbershopService.list(); }
+                                const first = shops[0];
+                                if (first) navigate(`/barbearias/${first.id_barbearia}/bookings`);
+                                else alert('Nenhuma barbearia encontrada.');
+                              } catch (err) {
+                                alert('Erro ao localizar barbearia.');
+                              }
+                            }}
                             className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
-                            Agendamentos do Barbeiro
+                            <span className="relative z-10">Agendamentos do Barbeiro</span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                           </button>
                         </dd>
                       </dl>
@@ -1777,12 +1746,13 @@ const Dashboard: React.FC = () => {
                         <dt className="text-sm font-medium text-gray-500 truncate">
 
                         </dt>
-                        <dd className="text-lg font-medium text-gray-900">
+                        <dd className="text-lg font-medium text-white">
                           <button
                             onClick={() => navigate('/booking')}
                             className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
-                            Agendar Serviço
+                            <span className="relative z-10">Agendar Serviço</span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                           </button>
                         </dd>
                       </dl>
@@ -1801,12 +1771,13 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dl>
-                        <dd className="text-lg font-medium text-gray-900">
+                        <dd className="text-lg font-medium text-white">
                           <button
                             onClick={() => navigate('/my-appointments')}
                             className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
-                            Meus Agendamentos
+                            <span className="relative z-10">Meus Agendamentos</span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                           </button>
                         </dd>
                       </dl>
@@ -1825,12 +1796,13 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dl>
-                        <dd className="text-lg font-medium text-gray-900">
+                        <dd className="text-lg font-medium text-white">
                           <button
                             onClick={() => navigate('/appointment-history')}
                             className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-300 hover:shadow-amber-500/50 hover:-translate-y-0.5"
                           >
-                            Histórico
+                            <span className="relative z-10">Histórico</span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                           </button>
                         </dd>
                       </dl>
@@ -1912,7 +1884,23 @@ const Dashboard: React.FC = () => {
                         <li key={b.id_barbearia} className="py-3">
                           <div className="flex items-start justify-between gap-4">
                             <div>
-                              <p className="font-bold text-white">{b.nome}</p>
+                              <p className="font-medium">{b.nome}</p>
+                              {/* Barbershop rating (if available) */}
+                              {(() => {
+                                const rev = barbershopReviewsMap[Number(b.id_barbearia)];
+                                if (!rev) return null;
+                                const avg = rev.average ?? 0;
+                                return (
+                                  <div className="mt-1 flex items-center gap-2 text-sm text-gray-300">
+                                    <div className="inline-flex items-center gap-0.5">
+                                      {[1,2,3,4,5].map((n) => (
+                                        <svg key={n} className={`h-4 w-4 ${avg >= n - 0.5 ? 'text-yellow-400' : 'text-white'}`} viewBox="0 0 20 20" fill="currentColor"><path d="M10 15l-5.878 3.09 1.122-6.545L.488 6.91l6.561-.954L10 0l2.951 5.956 6.561.954-4.756 4.635 1.122 6.545z"/></svg>
+                                      ))}
+                                    </div>
+                                    <span className="text-xs tabular-nums">{rev.average ? rev.average.toFixed(1) : '—'} ({rev.total})</span>
+                                  </div>
+                                );
+                              })()}
                               {b.endereco && (
                                 <p className="text-sm text-gray-400">{b.endereco}</p>
                               )}
@@ -1924,8 +1912,9 @@ const Dashboard: React.FC = () => {
                               onClick={() => setSelectedBarbershopId(b.id_barbearia)}
                               className={`inline-flex items-center px-3 py-2 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white transition-all duration-300 ${selectedBarbershopId === b.id_barbearia ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700' : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700'} focus:outline-none focus:ring-2 focus:ring-cyan-500`}
                             >
-                              {selectedBarbershopId === b.id_barbearia ? 'Selecionado' : 'Selecionar'}
-                            </button>
+                                <span className="relative z-10">{selectedBarbershopId === b.id_barbearia ? 'Selecionado' : 'Selecionar'}</span>
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                              </button>
                           </div>
                         </li>
                       ))}
@@ -1938,7 +1927,8 @@ const Dashboard: React.FC = () => {
                       onClick={() => setShowBooking(false)}
                       className="px-4 py-2 rounded-xl border border-gray-600 bg-gray-700 text-gray-200 text-sm font-bold hover:bg-gray-600 transition-colors"
                     >
-                      Cancelar
+                      <span className="relative z-10">Cancelar</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/8 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     </button>
                     <button
                       type="button"
@@ -1946,7 +1936,8 @@ const Dashboard: React.FC = () => {
                       disabled={!selectedBarbershopId}
                       className={`px-4 py-2 rounded-xl text-white text-sm font-bold transition-all duration-300 ${!selectedBarbershopId ? 'bg-gray-600 cursor-not-allowed' : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 shadow-lg hover:shadow-cyan-500/50'}`}
                     >
-                      Continuar
+                      <span className="relative z-10">Continuar</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     </button>
                   </div>
                 </div>
@@ -1957,12 +1948,27 @@ const Dashboard: React.FC = () => {
                       Barbearia selecionada:{' '}
                       <span className="font-medium">
                         {barbershops.find((b) => b.id_barbearia === selectedBarbershopId)?.nome || '—'}
+                        {(() => {
+                          const rev = barbershopReviewsMap[Number(selectedBarbershopId)];
+                          if (!rev) return null;
+                          const avg = rev.average ?? 0;
+                          return (
+                            <span className="ml-2 inline-flex items-center gap-1 text-sm text-gray-300">
+                              <span className="inline-flex items-center gap-0.5">
+                                {[1,2,3,4,5].map((n) => (
+                                  <svg key={n} className={`h-4 w-4 ${avg >= n - 0.5 ? 'text-yellow-400' : 'text-white'}`} viewBox="0 0 20 20" fill="currentColor"><path d="M10 15l-5.878 3.09 1.122-6.545L.488 6.91l6.561-.954L10 0l2.951 5.956 6.561.954-4.756 4.635 1.122 6.545z"/></svg>
+                                ))}
+                              </span>
+                              <span className="text-xs tabular-nums">{rev.average ? rev.average.toFixed(1) : '—'} ({rev.total})</span>
+                            </span>
+                          );
+                        })()}
                       </span>
                     </p>
                     <button
                       type="button"
                       onClick={() => setBookingStep(1)}
-                      className="text-indigo-600 text-sm hover:underline"
+                      className="text-amber-400 text-sm hover:underline"
                     >
                       Trocar
                     </button>
@@ -1996,7 +2002,7 @@ const Dashboard: React.FC = () => {
                         {(bookingServices || []).map((s) => {
                           const checked = booking.service.includes(s.nome);
                           return (
-                            <label key={s.id} className={`cursor-pointer inline-flex items-center gap-2 text-sm rounded-full px-3 py-2 border ${checked ? 'bg-indigo-50 border-indigo-300 text-indigo-900' : 'bg-white border-gray-200 text-gray-700'} transition-colors`}>
+                            <label key={s.id} className={`cursor-pointer inline-flex items-center gap-2 text-sm rounded-full px-3 py-2 border ${checked ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-white border-gray-200 text-gray-700'} transition-colors`}>
                               <input
                                 type="checkbox"
                                 className="sr-only"
@@ -2034,7 +2040,7 @@ const Dashboard: React.FC = () => {
                       <div>
                         <label className="block text-sm font-medium text-gray-800">Data</label>
                         <div className="relative mt-1">
-                          <svg className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 20 20" fill="currentColor"><path d="M6 2a1 1 0 000 2h8a1 1 0 100-2H6zM3 7a2 2 0 012-2h10a2 2 0 012 2v8a3 3 0 01-3 3H6a3 3 0 01-3-3V7z"/></svg>
+                          <svg className="h-4 w-4 text-amber-300 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 20 20" fill="currentColor"><path d="M6 2a1 1 0 000 2h8a1 1 0 100-2H6zM3 7a2 2 0 012-2h10a2 2 0 012 2v8a3 3 0 01-3 3H6a3 3 0 01-3-3V7z"/></svg>
                           <input
                             type="date"
                             name="date"
@@ -2048,7 +2054,7 @@ const Dashboard: React.FC = () => {
                       <div>
                         <label className="block text-sm font-medium text-gray-800">Hora</label>
                         <div className="relative mt-1">
-                          <svg className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 8V5a1 1 0 10-2 0v6a1 1 0 00.293.707l3 3a1 1 0 101.414-1.414L11 10z"/></svg>
+                          <svg className="h-4 w-4 text-amber-300 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 8V5a1 1 0 10-2 0v6a1 1 0 00.293.707l3 3a1 1 0 101.414-1.414L11 10z"/></svg>
                           <input
                             type="time"
                             name="time"
@@ -2101,7 +2107,7 @@ const Dashboard: React.FC = () => {
                                         setBooking((prev) => ({ ...prev, barber_id: id }));
                                       }
                                     }}
-                                    className={`flex items-center justify-between gap-3 p-3 rounded-md border transition-colors cursor-pointer ${selected ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
+                                    className={`flex items-center justify-between gap-3 p-3 rounded-md border transition-colors cursor-pointer ${selected ? 'border-amber-500 bg-amber-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
                                   >
                                     <div className="flex items-center gap-2">
                                       <div className="h-8 w-8 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium select-none overflow-hidden">
@@ -2168,16 +2174,18 @@ const Dashboard: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setShowBooking(false)}
-                      className="px-4 py-2 rounded-md border border-gray-300 bg-white text-sm"
+                      className="relative px-4 py-2 rounded-md border border-gray-300 bg-white text-sm overflow-hidden group"
                     >
-                      Cancelar
+                      <span className="relative z-10">Cancelar</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/8 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     </button>
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className={`px-4 py-2 rounded-md text-white text-sm ${isSubmitting ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                      className={`relative px-4 py-2 rounded-md text-white text-sm ${isSubmitting ? 'bg-amber-300 cursor-not-allowed' : 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500'} overflow-hidden group`}
                     >
-                      {isSubmitting ? 'Enviando...' : 'Confirmar'}
+                      <span className="relative z-10">{isSubmitting ? 'Enviando...' : 'Confirmar'}</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     </button>
                     </div>
                   </div>
@@ -2213,18 +2221,18 @@ const Dashboard: React.FC = () => {
                 <div className="inline-flex rounded-md shadow-sm border border-gray-200 overflow-hidden" role="tablist" aria-label="Meus agendamentos - abas">
                   <button
                     onClick={() => setMyBookingsTab('proximos')}
-                    className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium ${myBookingsTab === 'proximos' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                    className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium ${myBookingsTab === 'proximos' ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-gray-900' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
                     aria-pressed={myBookingsTab === 'proximos'} role="tab" aria-selected={myBookingsTab === 'proximos'}
                   >
-                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M6 2a1 1 0 000 2h8a1 1 0 100-2H6zM3 7a2 2 0 012-2h10a2 2 0 012 2v8a3 3 0 01-3 3H6a3 3 0 01-3-3V7z"/></svg>
+                    <svg className="h-4 w-4 text-amber-300" viewBox="0 0 20 20" fill="currentColor"><path d="M6 2a1 1 0 000 2h8a1 1 0 100-2H6zM3 7a2 2 0 012-2h10a2 2 0 012 2v8a3 3 0 01-3 3H6a3 3 0 01-3-3V7z"/></svg>
                     <span className="hidden sm:inline">Próximos</span>
                   </button>
                   <button
                     onClick={() => setMyBookingsTab('historico')}
-                    className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium border-l ${myBookingsTab === 'historico' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                    className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium border-l ${myBookingsTab === 'historico' ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-gray-900' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
                     aria-pressed={myBookingsTab === 'historico'} role="tab" aria-selected={myBookingsTab === 'historico'}
                   >
-                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <svg className="h-4 w-4 text-amber-300" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M3 6h14v2H3zM3 10h14v2H3zM3 14h14v2H3z" />
                     </svg>
                     <span className="hidden sm:inline">Histórico</span>
@@ -2237,9 +2245,9 @@ const Dashboard: React.FC = () => {
                     disabled={isLoadingBookings}
                     title="Atualizar lista"
                     aria-label="Atualizar lista"
-                    className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium border ${isLoadingBookings ? 'bg-white text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                    className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium border ${isLoadingBookings ? 'bg-gray-700 text-white border-gray-600 cursor-not-allowed' : 'bg-gray-700 text-white border-gray-600 hover:bg-gray-600'}`}
                   >
-                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 10a7 7 0 1111.95 4.95l1.6 1.6a1 1 0 11-1.414 1.415l-1.6-1.6A7 7 0 013 10zm7-5a5 5 0 100 10 5 5 0 000-10z"/></svg>
+                    <svg className="h-4 w-4 text-amber-300" viewBox="0 0 20 20" fill="currentColor"><path d="M3 10a7 7 0 1111.95 4.95l1.6 1.6a1 1 0 11-1.414 1.415l-1.6-1.6A7 7 0 013 10zm7-5a5 5 0 100 10 5 5 0 000-10z"/></svg>
                     <span className="hidden sm:inline">{isLoadingBookings ? 'Atualizando...' : 'Atualizar'}</span>
                   </button>
                 </div>
@@ -2343,7 +2351,7 @@ const Dashboard: React.FC = () => {
                                   )}
                                 </div>
                                 <div className="text-sm text-gray-600 flex items-center gap-2">
-                                  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M6 2a1 1 0 000 2h8a1 1 0 100-2H6zM4 7a2 2 0 012-2h8a2 2 0 012 2v7a3 3 0 01-3 3H7a3 3 0 01-3-3V7z"/></svg>
+                                  <svg className="h-4 w-4 text-amber-300" viewBox="0 0 20 20" fill="currentColor"><path d="M6 2a1 1 0 000 2h8a1 1 0 100-2H6zM4 7a2 2 0 012-2h8a2 2 0 012 2v7a3 3 0 01-3 3H7a3 3 0 01-3-3V7z"/></svg>
                                   <span>{b.date} às {b.time}</span>
                                 </div>
                                 <div className="text-sm text-gray-600 flex items-center gap-2">
@@ -2352,9 +2360,9 @@ const Dashboard: React.FC = () => {
                                 {(() => {
                                   const name = getBookingBarbershopName(b);
                                   const phone = b.barbearia?.telefone_contato;
-                                  return name ? (
+                                    return name ? (
                                     <div className="text-sm text-gray-600 flex items-center gap-2">
-                                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 7a2 2 0 012-2h10a2 2 0 012 2v8a3 3 0 01-3 3H6a3 3 0 01-3-3V7zM6 3a1 1 0 000 2h8a1 1 0 100-2H6z"/></svg>
+                                      <svg className="h-4 w-4 text-amber-300" viewBox="0 0 20 20" fill="currentColor"><path d="M3 7a2 2 0 012-2h10a2 2 0 012 2v8a3 3 0 01-3 3H6a3 3 0 01-3-3V7zM6 3a1 1 0 000 2h8a1 1 0 100-2H6z"/></svg>
                                       <span>Barbearia: {name}{phone ? ` • ${phone}` : ''}</span>
                                     </div>
                                   ) : null;
@@ -2365,7 +2373,7 @@ const Dashboard: React.FC = () => {
                                 {myBookingsTab === 'proximos' && (
                                   <div className="flex flex-col gap-2">
                                     <button
-                                      onClick={() => handleCancelBooking(b.id)}
+                                      onClick={() => openCancelBookingModal(b.id)}
                                       disabled={cancellingId === b.id}
                                       className={`inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium border ${cancellingId === b.id ? 'bg-white text-red-300 border-red-200 cursor-not-allowed' : 'bg-white text-red-700 border-red-300 hover:bg-red-50'}`}
                                     >
@@ -2374,7 +2382,7 @@ const Dashboard: React.FC = () => {
                                     </button>
                                     <button
                                       onClick={() => openRescheduleModal(b)}
-                                      className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium border bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-50"
+                                      className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium border bg-white text-amber-700 border-amber-300 hover:bg-amber-50"
                                       title="Solicitar reagendamento"
                                     >
                                       <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 8V5a1 1 0 10-2 0v6a1 1 0 00.293.707l3 3a1 1 0 101.414-1.414L11 10z"/></svg>
@@ -2413,7 +2421,7 @@ const Dashboard: React.FC = () => {
                               aria-label="Limpar agendamentos finalizados"
                               className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium border bg-white text-gray-700 border-gray-300 hover:bg-gray-50 transition-colors"
                             >
-                              <svg className="h-4 w-4 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><path d="M6 6a1 1 0 011-1h6a1 1 0 011 1v9a2 2 0 01-2 2H8a2 2 0 01-2-2V6zM8 4a2 2 0 012-2h0a2 2 0 012 2h3a1 1 0 010 2H5a1 1 0 110-2h3z"/></svg>
+                              <svg className="h-4 w-4 text-amber-300" viewBox="0 0 20 20" fill="currentColor"><path d="M6 6a1 1 0 011-1h6a1 1 0 011 1v9a2 2 0 01-2 2H8a2 2 0 01-2-2V6zM8 4a2 2 0 012-2h0a2 2 0 012 2h3a1 1 0 010 2H5a1 1 0 110-2h3z"/></svg>
                               <span>Limpar finalizados</span>
                             </button>
                           </li>
@@ -2442,7 +2450,7 @@ const Dashboard: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Destino</label>
                   <div className="inline-flex rounded-md border border-gray-200 overflow-hidden">
                     {(['barbeiro','barbearia'] as const).map(t => (
-                      <button key={t} onClick={() => setReviewTarget(t)} className={`px-3 py-2 text-sm ${reviewTarget===t ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>{t.charAt(0).toUpperCase()+t.slice(1)}</button>
+                      <button key={t} onClick={() => setReviewTarget(t)} className={`px-3 py-2 text-sm ${reviewTarget===t ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-gray-900' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>{t.charAt(0).toUpperCase()+t.slice(1)}</button>
                     ))}
                   </div>
                 </div>
@@ -2463,7 +2471,7 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-end gap-2">
                   <button onClick={() => setShowReviewModal(false)} className="px-3 py-2 rounded-md text-sm border bg-white text-gray-700 border-gray-300 hover:bg-gray-50">Cancelar</button>
-                  <button onClick={handleSubmitReview} disabled={isSubmittingReview} className={`px-3 py-2 rounded-md text-sm text-white ${isSubmittingReview?'bg-indigo-400 cursor-not-allowed':'bg-indigo-600 hover:bg-indigo-700'}`}>{isSubmittingReview ? 'Enviando...' : 'Enviar'}</button>
+                  <button onClick={handleSubmitReview} disabled={isSubmittingReview} className={`px-3 py-2 rounded-md text-sm text-white ${isSubmittingReview?'bg-amber-300 cursor-not-allowed':'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500'}`}>{isSubmittingReview ? 'Enviando...' : 'Enviar'}</button>
                 </div>
               </div>
             </div>
@@ -2472,12 +2480,12 @@ const Dashboard: React.FC = () => {
 
         {/* Profile Modal */}
         {showProfileModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
             <div className="fixed inset-0 bg-black/60" onClick={() => setShowProfileModal(false)} aria-hidden />
-            <div className="relative z-50 w-full max-w-md bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 rounded-2xl shadow-2xl p-6 border border-gray-600">
+            <div className="relative z-50 w-full max-w-md sm:max-w-lg md:max-w-xl bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 sm:rounded-2xl rounded-t-2xl shadow-2xl p-4 sm:p-6 border border-gray-600 max-h-[90vh] overflow-auto text-white">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-400">Atualizar meus dados</h3>
-                <button onClick={() => setShowProfileModal(false)} className="text-gray-400 hover:text-white transition-colors" aria-label="Fechar">✕</button>
+                <button onClick={() => setShowProfileModal(false)} className="text-gray-300 hover:text-white" aria-label="Fechar">✕</button>
               </div>
               <div className="space-y-4">
                 {/* Nome */}
@@ -2520,7 +2528,7 @@ const Dashboard: React.FC = () => {
                     value={formatPhoneBR(profileTelefone)}
                     onChange={(e)=>setProfileTelefone(formatPhoneBR(e.target.value))}
                     inputMode="numeric"
-                    className={`mt-1 block w-full rounded-lg border bg-gray-700 text-white px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500 ${profileTelefone && (onlyDigits(profileTelefone).length < 10 || onlyDigits(profileTelefone).length > 11) ? 'border-red-400' : 'border-gray-600'}`}
+                    className={`mt-1 block w-full rounded-lg bg-gray-700 border px-3 py-2 text-sm text-white shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent ${(profileTelefone && (onlyDigits(profileTelefone).length < 10 || onlyDigits(profileTelefone).length > 11)) ? 'border-red-600' : 'border-gray-600'}`}
                     placeholder="(11) 98888-7777"
                   />
                   {profileTelefone && (onlyDigits(profileTelefone).length < 10 || onlyDigits(profileTelefone).length > 11) && (
@@ -2528,14 +2536,18 @@ const Dashboard: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button onClick={() => setShowProfileModal(false)} className="px-3 py-2 rounded-md text-sm border bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600 transition-colors">Cancelar</button>
+                <div className="flex flex-col sm:flex-row items-center sm:justify-end gap-2 pt-2">
+                  <button onClick={() => setShowProfileModal(false)} className="relative w-full sm:w-auto px-3 py-2 rounded-md text-sm border bg-gray-700 text-white border-gray-600 hover:bg-gray-600 overflow-hidden group"> 
+                    <span className="relative z-10">Cancelar</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                  </button>
                   <button
                     onClick={handleSaveProfile}
                     disabled={isUpdatingProfile || profileNome.trim().length < 2 || !emailRegex.test(profileEmail.trim()) || (Boolean(profileTelefone) && (onlyDigits(profileTelefone).length < 10 || onlyDigits(profileTelefone).length > 11))}
-                    className={`px-3 py-2 rounded-md text-sm text-white transition-all duration-300 ${isUpdatingProfile || profileNome.trim().length < 2 || !emailRegex.test(profileEmail.trim()) || (Boolean(profileTelefone) && (onlyDigits(profileTelefone).length < 10 || onlyDigits(profileTelefone).length > 11)) ? 'bg-gray-600 cursor-not-allowed' : 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 shadow-lg hover:shadow-amber-500/50'}`}
+                    className={`relative w-full sm:w-auto px-3 py-2 rounded-md text-sm font-semibold ${isUpdatingProfile || profileNome.trim().length < 2 || !emailRegex.test(profileEmail.trim()) || (Boolean(profileTelefone) && (onlyDigits(profileTelefone).length < 10 || onlyDigits(profileTelefone).length > 11)) ? 'bg-amber-300 text-gray-800 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600 text-gray-900 overflow-hidden group'}`}
                   >
-                    {isUpdatingProfile ? 'Salvando...' : 'Salvar'}
+                    <span className="relative z-10">{isUpdatingProfile ? 'Salvando...' : 'Salvar'}</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                   </button>
                 </div>
               </div>
@@ -2545,78 +2557,78 @@ const Dashboard: React.FC = () => {
 
         {/* Barbershop Profile Modal */}
         {showBarbershopModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="fixed inset-0 bg-black/40" onClick={() => setShowBarbershopModal(false)} aria-hidden />
-            <div className="relative z-50 w-full max-w-md bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/60" onClick={() => setShowBarbershopModal(false)} aria-hidden />
+            <div className="relative z-50 w-full max-w-lg sm:max-w-xl md:max-w-2xl bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 sm:rounded-2xl rounded-t-2xl shadow-2xl p-6 border border-amber-500/20 max-h-[90vh] overflow-auto">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold text-gray-900">Editar dados da barbearia</h3>
-                <button onClick={() => setShowBarbershopModal(false)} className="text-gray-500 hover:text-gray-700" aria-label="Fechar">✕</button>
+                <h3 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500">Editar dados da barbearia</h3>
+                <button onClick={() => setShowBarbershopModal(false)} className="text-gray-300 hover:text-white" aria-label="Fechar">✕</button>
               </div>
               <div className="space-y-4">
                 {/* Nome */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">Nome</label>
+                  <label className="block text-xs font-medium text-gray-200">Nome</label>
                   <input
                     type="text"
                     value={bsNome}
                     onChange={(e)=>setBsNome(e.target.value)}
-                    className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 ${bsNome.trim().length > 0 && bsNome.trim().length < 2 ? 'border-red-300' : 'border-gray-300'}`}
+                    className={`mt-1 block w-full rounded-lg bg-gray-700 border px-3 py-2 text-sm text-white shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent ${bsNome.trim().length > 0 && bsNome.trim().length < 2 ? 'border-red-600' : 'border-gray-600'}`}
                     placeholder="Nome da barbearia"
                   />
                   {bsNome.trim().length > 0 && bsNome.trim().length < 2 && (
-                    <p className="mt-1 text-xs text-red-600">Informe ao menos 2 caracteres.</p>
+                    <p className="mt-1 text-xs text-red-500">Informe ao menos 2 caracteres.</p>
                   )}
                 </div>
 
                 {/* Endereço */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">Endereço (opcional)</label>
+                  <label className="block text-xs font-medium text-gray-200">Endereço (opcional)</label>
                   <input
                     type="text"
                     value={bsEndereco}
                     onChange={(e)=>setBsEndereco(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                    className="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 px-3 py-2 text-sm text-white shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                     placeholder="Rua Exemplo, 123 - Bairro, Cidade"
                   />
                 </div>
 
                 {/* Telefone */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">Telefone (opcional)</label>
+                  <label className="block text-xs font-medium text-gray-200">Telefone (opcional)</label>
                   <input
                     type="tel"
                     value={formatPhoneBR(bsTelefone)}
                     onChange={(e)=>setBsTelefone(formatPhoneBR(e.target.value))}
                     inputMode="numeric"
-                    className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 ${(bsTelefone && (onlyDigits(bsTelefone).length < 10 || onlyDigits(bsTelefone).length > 11)) ? 'border-red-300' : 'border-gray-300'}`}
+                    className={`mt-1 block w-full rounded-lg bg-gray-700 border px-3 py-2 text-sm text-white shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent ${(bsTelefone && (onlyDigits(bsTelefone).length < 10 || onlyDigits(bsTelefone).length > 11)) ? 'border-red-600' : 'border-gray-600'}`}
                     placeholder="(11) 4002-8922"
                   />
                   {bsTelefone && (onlyDigits(bsTelefone).length < 10 || onlyDigits(bsTelefone).length > 11) && (
-                    <p className="mt-1 text-xs text-red-600">Informe um telefone com DDD (10 ou 11 dígitos).</p>
+                    <p className="mt-1 text-xs text-red-500">Informe um telefone com DDD (10 ou 11 dígitos).</p>
                   )}
                 </div>
 
                 {/* Horário */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">Horário de funcionamento (opcional)</label>
+                  <label className="block text-xs font-medium text-gray-200">Horário de funcionamento (opcional)</label>
                   <input
                     type="text"
                     value={bsHorario}
                     onChange={(e)=>setBsHorario(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                    className="mt-1 block w-full rounded-lg bg-gray-700 border border-gray-600 px-3 py-2 text-sm text-white shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                     placeholder="Ex.: Seg a Sex 9h-18h; Sáb 9h-14h"
                   />
                   {bsHorario && bsHorario.length > 80 && (
-                    <p className="mt-1 text-xs text-red-600">Texto muito longo. Seja sucinto (até 80 caracteres).</p>
+                    <p className="mt-1 text-xs text-red-500">Texto muito longo. Seja sucinto (até 80 caracteres).</p>
                   )}
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button onClick={() => setShowBarbershopModal(false)} className="px-3 py-2 rounded-md text-sm border bg-white text-gray-700 border-gray-300 hover:bg-gray-50">Cancelar</button>
+                <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2">
+                  <button onClick={() => setShowBarbershopModal(false)} className="w-full sm:w-auto px-3 py-2 rounded-md text-sm border bg-gray-700 text-white border-gray-600 hover:bg-gray-600">Cancelar</button>
                   <button
                     onClick={handleSaveBarbershop}
                     disabled={isUpdatingBarbershop || bsNome.trim().length < 2 || (Boolean(bsTelefone) && (onlyDigits(bsTelefone).length < 10 || onlyDigits(bsTelefone).length > 11)) || (Boolean(bsHorario) && bsHorario.length > 80)}
-                    className={`px-3 py-2 rounded-md text-sm text-white ${isUpdatingBarbershop || bsNome.trim().length < 2 || (Boolean(bsTelefone) && (onlyDigits(bsTelefone).length < 10 || onlyDigits(bsTelefone).length > 11)) || (Boolean(bsHorario) && bsHorario.length > 80) ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                    className={`w-full sm:w-auto px-3 py-2 rounded-md text-sm font-semibold ${isUpdatingBarbershop || bsNome.trim().length < 2 || (Boolean(bsTelefone) && (onlyDigits(bsTelefone).length < 10 || onlyDigits(bsTelefone).length > 11)) || (Boolean(bsHorario) && bsHorario.length > 80) ? 'bg-amber-300 text-gray-800 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600 text-gray-900'}`}
                   >
                     {isUpdatingBarbershop ? 'Salvando...' : 'Salvar'}
                   </button>
@@ -2674,312 +2686,14 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-end gap-2">
                   <button onClick={() => setShowRescheduleModal(false)} className="px-3 py-2 rounded-md text-sm border bg-white text-gray-700 border-gray-300 hover:bg-gray-50">Cancelar</button>
-                  <button onClick={handleSubmitReschedule} disabled={isSubmittingReschedule} className={`px-3 py-2 rounded-md text-sm text-white ${isSubmittingReschedule ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}>{isSubmittingReschedule ? 'Enviando...' : 'Enviar pedido'}</button>
+                  <button onClick={handleSubmitReschedule} disabled={isSubmittingReschedule} className={`px-3 py-2 rounded-md text-sm text-white ${isSubmittingReschedule ? 'bg-amber-300 cursor-not-allowed' : 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500'}`}>{isSubmittingReschedule ? 'Enviando...' : 'Enviar pedido'}</button>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Shop Bookings slide-over */}
-        {showShopBookings && (
-          <div className="fixed inset-0 z-50 flex">
-            <div
-              className="fixed inset-0 bg-black/40 z-40"
-              onClick={() => setShowShopBookings(false)}
-              aria-hidden
-            />
-            <aside className="ml-auto w-full max-w-md bg-white shadow-xl p-6 overflow-auto z-50">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">{user?.tipo_usuario === 'barbeiro' ? 'Agendamentos do Barbeiro' : 'Agendamentos da Barbearia'}</h3>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setShowShopBookings(false);
-                      setSelectedShopId('');
-                      setShopBookings(null);
-                      setMyBarberReviews(null);
-                    }}
-                    className="text-gray-500 hover:text-gray-700"
-                    aria-label="Fechar"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {user.tipo_usuario !== 'barbeiro' && (
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-700">
-                      Barbearia:{' '}
-                      <span className="font-medium">
-                        {barbershops.find((b) => b.id_barbearia === selectedShopId)?.nome || '—'}
-                      </span>
-                    </p>
-                    <div />
-                  </div>
-                )}
-                {user?.tipo_usuario === 'barbeiro'
-                  ? (
-                    myBarberReviews && (
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <div className="inline-flex items-center" aria-label="Avaliação do barbeiro">
-                          {[1,2,3,4,5].map(n => (
-                            <svg key={n} className={`h-4 w-4 ${((myBarberReviews.average||0) >= n - 0.5) ? 'text-yellow-400' : 'text-gray-300'}`} viewBox="0 0 20 20" fill="currentColor"><path d="M10 15l-5.878 3.09 1.122-6.545L.488 6.91l6.561-.954L10 0l2.951 5.956 6.561.954-4.756 4.635 1.122 6.545z"/></svg>
-                          ))}
-                        </div>
-                        <span className="tabular-nums">{myBarberReviews.average ? myBarberReviews.average.toFixed(1) : '—'}</span>
-                        <span className="text-gray-500">({myBarberReviews.total})</span>
-                      </div>
-                    )
-                  )
-                  : (
-                    selectedShopId && shopReviews && (
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        <div className="inline-flex items-center" aria-label="Avaliação da barbearia">
-                          {[1,2,3,4,5].map(n => (
-                            <svg key={n} className={`h-4 w-4 ${((shopReviews.average||0) >= n - 0.5) ? 'text-yellow-400' : 'text-gray-300'}`} viewBox="0 0 20 20" fill="currentColor"><path d="M10 15l-5.878 3.09 1.122-6.545L.488 6.91l6.561-.954L10 0l2.951 5.956 6.561.954-4.756 4.635 1.122 6.545z"/></svg>
-                          ))}
-                        </div>
-                        <span className="tabular-nums">{shopReviews.average ? shopReviews.average.toFixed(1) : '—'}</span>
-                        <span className="text-gray-500">({shopReviews.total})</span>
-                      </div>
-                    )
-                  )
-                }
-
-                {/* Pending reschedule requests */}
-                {selectedShopId && (
-                  <div className="border border-indigo-100 rounded-md p-3 bg-indigo-50/30">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2 text-sm font-medium text-indigo-800">
-                        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 8V5a1 1 0 10-2 0v6a1 1 0 00.293.707l3 3a1 1 0 101.414-1.414L11 10z"/></svg>
-                        Pedidos de reagendamento
-                      </div>
-                      <button
-                        onClick={() => selectedShopId && loadRescheduleRequests(Number(selectedShopId))}
-                        disabled={isLoadingRescheduleRequests}
-                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border ${isLoadingRescheduleRequests ? 'bg-white text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                      >
-                        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 10a7 7 0 1111.95 4.95l1.6 1.6a1 1 0 11-1.414 1.415l-1.6-1.6A7 7 0 013 10zm7-5a5 5 0 100 10 5 5 0 000-10z"/></svg>
-                        {isLoadingRescheduleRequests ? 'Atualizando...' : 'Atualizar'}
-                      </button>
-                    </div>
-                    {isLoadingRescheduleRequests ? (
-                      <p className="text-xs text-gray-600">Carregando pedidos...</p>
-                    ) : (!rescheduleRequests || rescheduleRequests.length === 0) ? (
-                      <p className="text-xs text-gray-600">Nenhum pedido pendente.</p>
-                    ) : (
-                      <ul className="space-y-2">
-                        {(rescheduleRequests || []).filter((r:any)=>r.status==='pendente').map((r:any)=> (
-                          <li key={r.id} className="bg-white border border-gray-200 rounded p-2">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                              <div className="text-xs text-gray-700">
-                                <div><span className="font-medium">Agendamento:</span> #{r.booking_id}</div>
-                                <div><span className="font-medium">Para:</span> {r.target_date} às {r.target_time}{r.target_barber_id ? ` • Barbeiro #${r.target_barber_id}` : ''}</div>
-                              </div>
-                              <div className="flex gap-2 flex-wrap justify-end">
-                                <button
-                                  onClick={() => handleRejectReschedule(r.id)}
-                                  disabled={rescheduleActionId === r.id}
-                                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-white ${rescheduleActionId === r.id ? 'bg-red-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
-                                >
-                                  Rejeitar
-                                </button>
-                                <button
-                                  onClick={() => handleApproveReschedule(r.id)}
-                                  disabled={rescheduleActionId === r.id}
-                                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-white ${rescheduleActionId === r.id ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
-                                >
-                                  Aprovar
-                                </button>
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
-
-                <div className="mb-2 flex items-center gap-2 overflow-x-auto whitespace-nowrap" role="tablist" aria-label={user?.tipo_usuario === 'barbeiro' ? 'Agendamentos do barbeiro - abas' : 'Agendamentos da barbearia - abas'}>
-                    {(['pendentes','confirmados','finalizados'] as const).map(tab => (
-                      <button
-                        key={tab}
-                        onClick={() => setShopBookingsTab(tab)}
-                        role="tab"
-                        aria-selected={shopBookingsTab === tab}
-                        className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium border transition-colors duration-200 ${shopBookingsTab === tab ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                      >
-                        <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" viewBox="0 0 20 20" fill="currentColor">
-                          {tab === 'pendentes' && <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 8V6a1 1 0 10-2 0v5a1 1 0 00.293.707l3 3a1 1 0 101.414-1.414L11 10z"/>}
-                          {tab === 'confirmados' && <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293A1 1 0 006.293 10.707l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>}
-                          {tab === 'finalizados' && <path d="M10 18a8 8 0 100-16 8 8 0 000 16z"/>}
-                        </svg>
-                        <span className="hidden sm:inline">{tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
-                      </button>
-                    ))}
-                    {/* Botão de limpar finalizados movido para o rodapé da lista */}
-                    <div className="ml-auto flex items-center gap-2">
-                      <button
-                        onClick={async () => { if (selectedShopId) { await loadShopBookings(Number(selectedShopId)); await loadRescheduleRequests(Number(selectedShopId)); } }}
-                        disabled={isLoadingShopBookings}
-                        title="Atualizar lista"
-                        aria-label="Atualizar lista"
-                        className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium border ${isLoadingShopBookings ? 'bg-white text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                      >
-                        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 10a7 7 0 1111.95 4.95l1.6 1.6a1 1 0 11-1.414 1.415l-1.6-1.6A7 7 0 013 10zm7-5a5 5 0 100 10 5 5 0 000-10z"/></svg>
-                        <span className="hidden sm:inline">{isLoadingShopBookings ? 'Atualizando...' : 'Atualizar'}</span>
-                      </button>
-                    </div>
-                </div>
-
-                {isLoadingShopBookings && (
-                  <div className="space-y-3">
-                    {[1,2,3].map((i) => (
-                      <div key={i} className="py-3">
-                        <div className="animate-pulse flex items-start justify-between gap-4">
-                          <div className="flex-1 space-y-2">
-                            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                            <div className="h-3 bg-gray-100 rounded w-1/4"></div>
-                          </div>
-                          <div className="h-8 w-24 bg-gray-200 rounded"></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {shopBookingsError && <p className="text-red-600">{shopBookingsError}</p>}
-                {!isLoadingShopBookings && !shopBookingsError && (
-                  <ul className="divide-y divide-gray-200">
-                    {(() => {
-                      const toDate = (b: BookingResponse) => new Date(`${b.date}T${b.time}:00`);
-                      let items = (shopBookings || []);
-                      // filtro por status (sempre um dos três)
-                      const mapTab: any = { pendentes: 'pendente', confirmados: 'confirmado', finalizados: 'finalizado' };
-                      items = items.filter(b => b.status === mapTab[shopBookingsTab]);
-                      // if barber, restrict to own bookings only
-                      if (user?.tipo_usuario === 'barbeiro') {
-                        const myId = myBarberId;
-                        items = items.filter(b => {
-                          const bid = (b as any).barber_id ?? b.barbeiro?.id_barbeiro;
-                          return myId ? Number(bid) === Number(myId) : false;
-                        });
-                      }
-                      // esconder finalizados limpos localmente
-                      if (shopBookingsTab === 'finalizados') {
-                        items = items.filter((b) => !hiddenFinalizedIds.has(b.id));
-                      }
-                      // ordenar por data
-                      items = items.sort((a, b) => +toDate(a) - +toDate(b));
-
-                      if (items.length === 0) {
-                        return <li className="py-3">Nenhum agendamento{user?.tipo_usuario === 'barbeiro' ? ' para você' : ''}.</li>;
-                      }
-
-                      return (
-                        <>
-                        {items.map((b) => (
-                          <li key={b.id} className="py-3">
-                            <div className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
-                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                                <div className="flex-1 space-y-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <div className="h-6 w-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium select-none overflow-hidden">
-                                      {b.cliente?.avatar_url ? (
-                                        <img src={b.cliente.avatar_url} alt={b.cliente?.nome || 'Cliente'} className="h-full w-full object-cover" />
-                                      ) : (
-                                        (() => {
-                                          const name = (b.cliente?.nome || '').trim();
-                                          const initials = name ? name.split(' ').filter(Boolean).slice(0,2).map(p => p[0]?.toUpperCase()).join('') : 'CL';
-                                          return initials;
-                                        })()
-                                      )}
-                                    </div>
-                                    <span className="font-semibold capitalize text-gray-900">{b.service}</span>
-                                    <span className={`inline-flex items-center gap-1 text-xs rounded-full px-2 py-0.5 capitalize ${
-                                      b.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
-                                      b.status === 'confirmado' ? 'bg-green-100 text-green-800' :
-                                      b.status === 'cancelado' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-                                    }`}>
-                                      <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                        {b.status === 'pendente' && <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 8V6a1 1 0 10-2 0v5a1 1 0 00.293.707l3 3a1 1 0 101.414-1.414L11 10z"/>}
-                                        {b.status === 'confirmado' && <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293A1 1 0 006.293 10.707l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>}
-                                        {b.status === 'cancelado' && <path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>}
-                                        {b.status === 'finalizado' && <path d="M10 18a8 8 0 100-16 8 8 0 000 16z"/>}
-                                      </svg>
-                                      {b.status}
-                                    </span>
-                                  </div>
-                                  <div className="text-sm text-gray-600 flex items-center gap-2">
-                                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M6 2a1 1 0 000 2h8a1 1 0 100-2H6zM4 7a2 2 0 012-2h8a2 2 0 012 2v7a3 3 0 01-3 3H7a3 3 0 01-3-3V7z"/></svg>
-                                    <span>{b.date} às {b.time}</span>
-                                  </div>
-                                  {(b.cliente?.nome || b.cliente?.telefone) && (
-                                    <div className="text-sm text-gray-600 flex items-center gap-2">
-                                      <span>Cliente: {b.cliente?.nome}{b.cliente?.telefone ? ` • ${b.cliente?.telefone}` : ''}</span>
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto justify-end">
-                                  {b.status === 'pendente' && (
-                                    <button
-                                      onClick={() => handleShopConfirm(b.id)}
-                                      disabled={shopConfirmingId === b.id}
-                                      className={`inline-flex items-center gap-2 px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${shopConfirmingId === b.id ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500`}
-                                    >
-                                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 00-1.414 0L9 11.586 6.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l7-7a1 1 0 000-1.414z" clipRule="evenodd"/></svg>
-                                      {shopConfirmingId === b.id ? 'Confirmando...' : 'Confirmar'}
-                                    </button>
-                                  )}
-                                  {(b.status === 'pendente' || b.status === 'confirmado') && (
-                                    <button
-                                      onClick={() => handleShopCancel(b.id)}
-                                      disabled={shopCancellingId === b.id}
-                                      className={`inline-flex items-center gap-2 px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${shopCancellingId === b.id ? 'bg-red-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
-                                    >
-                                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
-                                      {shopCancellingId === b.id ? 'Cancelando...' : 'Cancelar'}
-                                    </button>
-                                  )}
-                                  {b.status === 'confirmado' && (
-                                    <button
-                                      onClick={() => handleShopFinalize(b.id)}
-                                      disabled={shopFinalizingId === b.id}
-                                      className={`inline-flex items-center gap-2 px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${shopFinalizingId === b.id ? 'bg-gray-300 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-800'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500`}
-                                    >
-                                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16 8 8 0 000-16z"/></svg>
-                                      {shopFinalizingId === b.id ? 'Finalizando...' : 'Finalizar'}
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                        {shopBookingsTab === 'finalizados' && items.length > 0 && (
-                          <li key="clear-finalizados" className="pt-2">
-                            <button
-                              onClick={handleClearFinalizedShop}
-                              title="Limpar agendamentos finalizados"
-                              aria-label="Limpar agendamentos finalizados"
-                              className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium border bg-white text-gray-700 border-gray-300 hover:bg-gray-50 transition-colors"
-                            >
-                              <svg className="h-4 w-4 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><path d="M6 6a1 1 0 011-1h6a1 1 0 011 1v9a2 2 0 01-2 2H8a2 2 0 01-2-2V6zM8 4a2 2 0 012-2h0a2 2 0 012 2h3a1 1 0 010 2H5a1 1 0 110-2h3z"/></svg>
-                              <span>Limpar finalizados</span>
-                            </button>
-                          </li>
-                        )}
-                        </>
-                      );
-                    })()}
-                  </ul>
-                )}
-              </div>
-            </aside>
-          </div>
-        )}
+        
 
         {/* Services manage/create slide-over */}
         {showServices && (
@@ -3018,7 +2732,7 @@ const Dashboard: React.FC = () => {
                   <button
                     onClick={() => setServicesTab('gerenciar')}
                     role="tab" aria-selected={servicesTab === 'gerenciar'}
-                    className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium border ${servicesTab === 'gerenciar' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                    className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium border ${servicesTab === 'gerenciar' ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-gray-900 border-amber-500' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
                   >
                     <span className="hidden sm:inline">Gerenciar</span>
                   </button>
@@ -3026,7 +2740,7 @@ const Dashboard: React.FC = () => {
                     <button
                       onClick={() => setServicesTab('cadastrar')}
                       role="tab" aria-selected={servicesTab === 'cadastrar'}
-                      className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium border ${servicesTab === 'cadastrar' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                      className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium border ${servicesTab === 'cadastrar' ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-gray-900 border-amber-500' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
                     >
                       <span className="hidden sm:inline">Cadastrar</span>
                     </button>
@@ -3073,22 +2787,7 @@ const Dashboard: React.FC = () => {
                                     {user.tipo_usuario === 'proprietario' && (
                                       <button
                                         type="button"
-                                        onClick={async () => {
-                                          if (!selectedShopId) { alert('Selecione uma barbearia.'); return; }
-                                          if (!window.confirm(`Deseja excluir o serviço "${s.nome}"? Esta ação não pode ser desfeita.`)) return;
-                                          try {
-                                            setDeletingServiceId(Number(s.id));
-                                            await serviceService.delete(Number(selectedShopId), Number(s.id));
-                                            // refresh list
-                                            await loadServices(Number(selectedShopId));
-                                            alert('Serviço excluído.');
-                                          } catch (err: any) {
-                                            const msg = err?.response?.data?.message || err?.message || 'Erro ao excluir serviço.';
-                                            alert(msg);
-                                          } finally {
-                                            setDeletingServiceId(null);
-                                          }
-                                        }}
+                                        onClick={() => openDeleteServiceModal(Number(s.id), s.nome)}
                                         disabled={deleting}
                                         className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium text-white ${deleting ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                                       >
@@ -3118,7 +2817,7 @@ const Dashboard: React.FC = () => {
                         placeholder="Ex.: Corte masculino"
                         value={serviceForm.nome}
                         onChange={(e) => setServiceForm({ ...serviceForm, nome: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-amber-500 focus:border-amber-500"
                         required
                       />
                     </div>
@@ -3129,7 +2828,7 @@ const Dashboard: React.FC = () => {
                         placeholder="Ex.: 49.90"
                         value={serviceForm.preco}
                         onChange={(e) => setServiceForm({ ...serviceForm, preco: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-amber-500 focus:border-amber-500"
                         required
                       />
                     </div>
@@ -3140,7 +2839,7 @@ const Dashboard: React.FC = () => {
                         placeholder="Detalhes do serviço, duração, etc."
                         value={serviceForm.descricao}
                         onChange={(e) => setServiceForm({ ...serviceForm, descricao: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-amber-500 focus:border-amber-500"
                       />
                     </div>
                   </div>
@@ -3159,7 +2858,7 @@ const Dashboard: React.FC = () => {
                         <button
                           type="submit"
                           disabled={creatingService || !valid}
-                          className={`px-4 py-2 rounded-md text-white text-sm ${creatingService || !valid ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                          className={`px-4 py-2 rounded-md text-white text-sm ${creatingService || !valid ? 'bg-amber-300 cursor-not-allowed' : 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500'}`}
                           title={!valid ? 'Preencha os campos obrigatórios corretamente.' : undefined}
                         >
                           {creatingService ? 'Enviando...' : 'Cadastrar'}
@@ -3210,7 +2909,7 @@ const Dashboard: React.FC = () => {
                   <button
                     onClick={() => setBarbersTab('gerenciar')}
                     role="tab" aria-selected={barbersTab === 'gerenciar'}
-                    className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium border ${barbersTab === 'gerenciar' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                    className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium border ${barbersTab === 'gerenciar' ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-gray-900 border-amber-500' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
                   >
                     <span className="hidden sm:inline">Gerenciar</span>
                   </button>
@@ -3218,7 +2917,7 @@ const Dashboard: React.FC = () => {
                     <button
                       onClick={() => setBarbersTab('cadastrar')}
                       role="tab" aria-selected={barbersTab === 'cadastrar'}
-                      className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium border ${barbersTab === 'cadastrar' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                      className={`inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium border ${barbersTab === 'cadastrar' ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-gray-900 border-amber-500' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
                     >
                       <span className="hidden sm:inline">Cadastrar</span>
                     </button>
@@ -3233,7 +2932,7 @@ const Dashboard: React.FC = () => {
                     <button
                       onClick={() => selectedShopId && loadBarbers(Number(selectedShopId))}
                       disabled={isLoadingBarbers}
-                      className={`inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors duration-200 ${isLoadingBarbers ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                      className={`inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors duration-200 ${isLoadingBarbers ? 'bg-amber-300 cursor-not-allowed' : 'bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500`}
                     >
                       {isLoadingBarbers ? 'Atualizando...' : 'Atualizar'}
                     </button>
@@ -3287,7 +2986,7 @@ const Dashboard: React.FC = () => {
                               <div key={key} className="p-3 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
                                 <div className="flex items-start justify-between gap-4">
                                   <div className="flex items-start gap-3">
-                                    <div className="h-10 w-10 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold select-none overflow-hidden">
+                                    <div className="h-10 w-10 rounded-full bg-amber-500 text-white flex items-center justify-center text-sm font-semibold select-none overflow-hidden">
                                       {barbeiro.avatar_url ? (
                                         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                                         // @ts-ignore
@@ -3321,7 +3020,7 @@ const Dashboard: React.FC = () => {
                                       {specialties.length > 0 && (
                                         <div className="mt-2 flex flex-wrap gap-1">
                                           {specialties.map((sp, i) => (
-                                            <span key={i} className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-xs border border-indigo-100">
+                                            <span key={i} className="inline-flex items-center rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-xs border border-amber-100">
                                               {sp}
                                             </span>
                                           ))}
@@ -3337,7 +3036,7 @@ const Dashboard: React.FC = () => {
                                           if (!(barbeiro as any).id_barbeiro) return;
                                           const id = (barbeiro as any).id_barbeiro;
                                           if (barbeiro.ativo) {
-                                            handleDeleteBarber(id);
+                                            openDeleteBarberModal(id);
                                           } else {
                                             handleToggleBarber(id, true);
                                           }
@@ -3379,7 +3078,7 @@ const Dashboard: React.FC = () => {
                         placeholder="Ex.: João Silva"
                         value={barberForm.nome}
                         onChange={(e) => setBarberForm({ ...barberForm, nome: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-amber-500 focus:border-amber-500"
                         required
                         autoComplete="name"
                       />
@@ -3394,7 +3093,7 @@ const Dashboard: React.FC = () => {
                         placeholder="exemplo@dominio.com"
                         value={barberForm.email}
                         onChange={(e) => setBarberForm({ ...barberForm, email: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-amber-500 focus:border-amber-500"
                         required
                         autoComplete="email"
                       />
@@ -3417,7 +3116,7 @@ const Dashboard: React.FC = () => {
                               <label
                                 key={srv.id}
                                 className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm cursor-pointer transition-colors ${
-                                  checked ? 'border-indigo-600 bg-indigo-50' : 'border-gray-300 hover:bg-gray-50'
+                                  checked ? 'border-amber-500 bg-amber-50' : 'border-gray-300 hover:bg-gray-50'
                                 }`}
                               >
                                 <span className="font-medium">
@@ -3434,7 +3133,7 @@ const Dashboard: React.FC = () => {
                                       : (barberForm.especialidades || []).filter((s) => s !== v);
                                     setBarberForm({ ...barberForm, especialidades: next });
                                   }}
-                                  className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                                  className="h-4 w-4 text-amber-400 border-gray-300 focus:ring-amber-500"
                                 />
                               </label>
                             );
@@ -3467,7 +3166,7 @@ const Dashboard: React.FC = () => {
                           }
                           setBarberForm({ ...barberForm, telefone: formatted });
                         }}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-amber-500 focus:border-amber-500"
                         required
                         autoComplete="tel"
                       />
@@ -3486,7 +3185,7 @@ const Dashboard: React.FC = () => {
                           placeholder="Mín. 6 caracteres"
                           value={barberForm.senha}
                           onChange={(e) => setBarberForm({ ...barberForm, senha: e.target.value })}
-                          className="block w-full rounded-md border-gray-300 shadow-sm pr-20 focus:ring-indigo-500 focus:border-indigo-500"
+                          className="block w-full rounded-md border-gray-300 shadow-sm pr-20 focus:ring-amber-500 focus:border-amber-500"
                           required
                           autoComplete="new-password"
                           minLength={6}
@@ -3494,7 +3193,7 @@ const Dashboard: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setShowPassword((v) => !v)}
-                          className="absolute inset-y-0 right-0 px-3 text-sm text-indigo-600 hover:text-indigo-700"
+                          className="absolute inset-y-0 right-0 px-3 text-sm text-amber-300 hover:text-amber-400"
                         >
                           {showPassword ? 'Ocultar' : 'Mostrar'}
                         </button>
@@ -3511,7 +3210,7 @@ const Dashboard: React.FC = () => {
                           placeholder="Repita a senha"
                           value={barberForm.confirmarSenha}
                           onChange={(e) => setBarberForm({ ...barberForm, confirmarSenha: e.target.value })}
-                          className="block w-full rounded-md border-gray-300 shadow-sm pr-20 focus:ring-indigo-500 focus:border-indigo-500"
+                          className="block w-full rounded-md border-gray-300 shadow-sm pr-20 focus:ring-amber-500 focus:border-amber-500"
                           required
                           autoComplete="new-password"
                           minLength={6}
@@ -3519,7 +3218,7 @@ const Dashboard: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setShowPassword((v) => !v)}
-                          className="absolute inset-y-0 right-0 px-3 text-sm text-indigo-600 hover:text-indigo-700"
+                          className="absolute inset-y-0 right-0 px-3 text-sm text-amber-300 hover:text-amber-400"
                         >
                           {showPassword ? 'Ocultar' : 'Mostrar'}
                         </button>
@@ -3566,6 +3265,236 @@ const Dashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map((toast) => (
+          <Toast
+            key={toast.id}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => removeToast(toast.id)}
+          />
+        ))}
+      </div>
+
+      {/* Modal de Sucesso - Cadastro de Barbeiro */}
+      {showSuccessBarberModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-2xl p-8 max-w-md w-full border-2 border-green-500/30 shadow-2xl shadow-green-500/20 animate-[fadeInUp_0.3s_ease-out]">
+            {/* Ícone de Sucesso */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-green-600 to-emerald-700 rounded-full p-4">
+                  <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Título e Mensagem */}
+            <h3 className="text-2xl font-bold text-center mb-3 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+              Barbeiro Cadastrado!
+            </h3>
+            <p className="text-gray-300 text-center mb-8 leading-relaxed">
+              O barbeiro foi cadastrado com sucesso e já está disponível para atendimento.
+            </p>
+
+            {/* Botão */}
+            <button
+              onClick={() => setShowSuccessBarberModal(false)}
+              className="group relative w-full bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-green-500/50 hover:-translate-y-0.5 overflow-hidden"
+            >
+              <span className="relative z-10">Entendido!</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação - Excluir Barbeiro */}
+      {showDeleteBarberModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-2xl p-8 max-w-md w-full border-2 border-red-500/30 shadow-2xl shadow-red-500/20 animate-[fadeInUp_0.3s_ease-out]">
+            {/* Ícone de Aviso */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-red-600 to-red-700 rounded-full p-4">
+                  <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Título e Mensagem */}
+            <h3 className="text-2xl font-bold text-center mb-3 bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">
+              Excluir Barbeiro?
+            </h3>
+            <p className="text-gray-300 text-center mb-8 leading-relaxed">
+              Tem certeza que deseja excluir este barbeiro? Esta ação não poderá ser desfeita.
+            </p>
+
+            {/* Botões */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteBarberModal(false);
+                  setBarberToDelete(null);
+                }}
+                className="flex-1 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={executeDeleteBarber}
+                className="group relative flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-red-500/50 hover:-translate-y-0.5 overflow-hidden"
+              >
+                <span className="relative z-10">Sim, excluir</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação - Excluir Serviço */}
+      {showDeleteServiceModal && serviceToDelete && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-2xl p-8 max-w-md w-full border-2 border-red-500/30 shadow-2xl shadow-red-500/20 animate-[fadeInUp_0.3s_ease-out]">
+            {/* Ícone de Aviso */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-red-600 to-red-700 rounded-full p-4">
+                  <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Título e Mensagem */}
+            <h3 className="text-2xl font-bold text-center mb-3 bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">
+              Excluir Serviço?
+            </h3>
+            <p className="text-gray-300 text-center mb-2 leading-relaxed">
+              Deseja excluir o serviço <span className="text-amber-400 font-semibold">"{serviceToDelete.nome}"</span>?
+            </p>
+            <p className="text-gray-400 text-center mb-8 text-sm">
+              Esta ação não pode ser desfeita.
+            </p>
+
+            {/* Botões */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteServiceModal(false);
+                  setServiceToDelete(null);
+                }}
+                className="flex-1 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={executeDeleteService}
+                className="group relative flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-red-500/50 hover:-translate-y-0.5 overflow-hidden"
+              >
+                <span className="relative z-10">Sim, excluir</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Sucesso - Confirmar Agendamento */}
+      {showConfirmBookingModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-2xl p-8 max-w-md w-full border-2 border-green-500/30 shadow-2xl shadow-green-500/20 animate-[fadeInUp_0.3s_ease-out]">
+            {/* Ícone de Sucesso */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-green-600 to-emerald-700 rounded-full p-4">
+                  <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Título e Mensagem */}
+            <h3 className="text-2xl font-bold text-center mb-3 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+              Agendamento Confirmado!
+            </h3>
+            <p className="text-gray-300 text-center mb-8 leading-relaxed">
+              O agendamento foi confirmado com sucesso. O cliente será notificado.
+            </p>
+
+            {/* Botão */}
+            <button
+              onClick={() => setShowConfirmBookingModal(false)}
+              className="group relative w-full bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-green-500/50 hover:-translate-y-0.5 overflow-hidden"
+            >
+              <span className="relative z-10">Entendido!</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação - Cancelar Agendamento */}
+      {showCancelBookingModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-2xl p-8 max-w-md w-full border-2 border-red-500/30 shadow-2xl shadow-red-500/20 animate-[fadeInUp_0.3s_ease-out]">
+            {/* Ícone de Aviso */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-red-600 to-red-700 rounded-full p-4">
+                  <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Título e Mensagem */}
+            <h3 className="text-2xl font-bold text-center mb-3 bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">
+              Cancelar Agendamento?
+            </h3>
+            <p className="text-gray-300 text-center mb-8 leading-relaxed">
+              Tem certeza que deseja cancelar este agendamento? O cliente será notificado sobre o cancelamento.
+            </p>
+
+            {/* Botões */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCancelBookingModal(false);
+                  setBookingToCancelShop(null);
+                }}
+                className="flex-1 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+              >
+                Não, manter
+              </button>
+              <button
+                onClick={() => {
+                  executeCancelBooking();
+                }}
+                className="group relative flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-red-500/50 hover:-translate-y-0.5 overflow-hidden"
+              >
+                <span className="relative z-10">Sim, cancelar</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

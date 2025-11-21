@@ -4,6 +4,10 @@ import Login from './components/Login';
 import RegisterClient from './components/RegisterClient';
 import RegisterBarbershop from './components/RegisterBarbershop';
 import Dashboard from './components/Dashboard';
+import RegisterBarber from './components/RegisterBarber';
+import RegisterService from './components/RegisterService';
+import BarbershopBookings from './components/BarbershopBookings';
+import BarberBookings from './components/BarberBookings';
 
 import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
@@ -57,6 +61,39 @@ const AppRouter: React.FC = () => {
                 : <Navigate to="/login" replace />
             }
           />
+          <Route
+            path="/barbearias/:id/register-barber"
+            element={
+              isAuthenticated
+                ? (user?.tipo_usuario === 'proprietario' ? <RegisterBarber /> : <Navigate to="/dashboard" replace />)
+                : <Navigate to="/login" replace />
+            }
+          />
+          <Route
+            path="/barbearias/:id/register-service"
+            element={
+              isAuthenticated
+                ? (user?.tipo_usuario === 'proprietario' ? <RegisterService /> : <Navigate to="/dashboard" replace />)
+                : <Navigate to="/login" replace />
+            }
+          />
+          <Route
+            path="/barbearias/:id/bookings"
+            element={
+              isAuthenticated
+                ? (user?.tipo_usuario === 'proprietario' ? <BarbershopBookings /> : <Navigate to="/dashboard" replace />)
+                : <Navigate to="/login" replace />
+            }
+          />
+          <Route
+            path="/barbeiros/:id/bookings"
+            element={
+              isAuthenticated
+                ? (user?.tipo_usuario === 'barbeiro' ? <BarberBookings /> : <Navigate to="/dashboard" replace />)
+                : <Navigate to="/login" replace />
+            }
+          />
+          {/* Route for schedule removed (DefineSchedule component deleted) */}
           
  
           <Route 
