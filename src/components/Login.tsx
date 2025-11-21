@@ -153,19 +153,19 @@ const Login: React.FC = () => {
                 </label>
                 <input
                   id="senha"
-                  name="senha"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className="appearance-none block w-full px-4 py-3 bg[#0f1720] bg-[#0f1720] border border-[#23272b] rounded-lg shadow-sm placeholder-gray-400 text-white focus:outline-none focus:ring-0 transition duration-150"
-                  placeholder="••••••••"
-                  value={formData.senha}
-                  onChange={handleChange}
+                    name="senha"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    className="appearance-none block w-full px-4 py-3 bg-[#0f1720] border border-[#23272b] rounded-lg shadow-sm placeholder-gray-400 text-white focus:outline-none focus:ring-0 transition duration-150"
+                    placeholder="••••••••"
+                    value={formData.senha}
+                    onChange={handleChange}
                 />
               </div>
             </div>
  
-            {error && (
+              {error && (
               <div className="rounded-lg bg-red-900 border border-red-800 p-4">
                 <div className="flex">
                   <svg
@@ -237,7 +237,7 @@ const Login: React.FC = () => {
                 </a>
               </p>
             </div>
-          </div>
+          </form>
         </div>
       </div>
 
