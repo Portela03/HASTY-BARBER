@@ -8,6 +8,7 @@ import RegisterBarber from './components/RegisterBarber';
 import RegisterService from './components/RegisterService';
 import BarbershopBookings from './components/BarbershopBookings';
 import BarberBookings from './components/BarberBookings';
+import ReportsPage from './components/ReportsPage';
 
 import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
@@ -93,8 +94,16 @@ const AppRouter: React.FC = () => {
                 : <Navigate to="/login" replace />
             }
           />
-          {/* Route for schedule removed (DefineSchedule component deleted) */}
           
+          {/* Rota de Relatórios - Apenas Proprietário */}
+          <Route
+            path="/reports"
+            element={
+              isAuthenticated
+                ? (user?.tipo_usuario === 'proprietario' ? <ReportsPage /> : <Navigate to="/dashboard" replace />)
+                : <Navigate to="/login" replace />
+            }
+          />
  
           <Route 
             path="/" 
