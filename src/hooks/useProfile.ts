@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { User } from '../../types';
-import { userService } from '../../services/api';
+import type { User, ApiErrorResponse } from '../types';
+import { userService } from '../services/api';
+
+type UserWithPhone = User & { telefone?: string; phone?: string };
 
 interface UseProfileProps {
   user: User | null;
@@ -33,8 +35,9 @@ export const useProfile = ({ user, token, login, onSuccess, onError, onWarning }
   const openProfileModal = () => {
     if (!user) return;
     setProfileNome(user.nome || '');
+    const userWithPhone = user as UserWithPhone;
+    const currentPhone = userWithPhone.telefone || userWithPhone.phone;
     setProfileEmail(user.email || '');
-    const currentPhone = (user as any)?.telefone ?? (user as any)?.phone ?? '';
     setProfileTelefone(currentPhone ? formatPhoneBR(currentPhone) : '');
     setShowProfileModal(true);
   };
@@ -65,8 +68,9 @@ export const useProfile = ({ user, token, login, onSuccess, onError, onWarning }
       
       setShowProfileModal(false);
       onSuccess('Dados atualizados.');
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Erro ao atualizar dados.';
+    } catch (err: unknown) {
+      const error = err as ApiErrorResponse;
+      const msg = error?.response?.data?.message || error.message || 'Erro ao atualizar dados.';
       onError(msg);
     } finally {
       setIsUpdating(false);

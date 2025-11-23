@@ -1,5 +1,5 @@
 import React from 'react';
-import { User } from '../../types';
+import type { User } from '../../types';
 
 interface DashboardHeaderProps {
   user: User;
@@ -10,7 +10,7 @@ interface DashboardHeaderProps {
   onLogout: () => void;
   menuOpen: boolean;
   setMenuOpen: (open: boolean) => void;
-  menuRef: React.RefObject<HTMLDivElement>;
+  menuRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({

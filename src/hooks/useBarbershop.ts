@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Barbearia } from '../../types';
-import { barbershopService } from '../../services/api';
+import type { Barbearia, ApiErrorResponse } from '../types';
+import { barbershopService } from '../services/api';
 
-interface UseBarbershopProps {
+export interface UseBarbershopParams {
   selectedShopId: number | '';
-  setSelectedShopId: (id: number | '') => void;
+  setSelectedShopId: React.Dispatch<React.SetStateAction<number | ''>>;
   barbershops: Barbearia[];
-  setBarbershops: (shops: Barbearia[]) => void;
+  setBarbershops: React.Dispatch<React.SetStateAction<Barbearia[]>>;
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
   onWarning: (message: string) => void;
@@ -20,7 +20,7 @@ export const useBarbershop = ({
   onSuccess,
   onError,
   onWarning,
-}: UseBarbershopProps) => {
+}: UseBarbershopParams) => {
   const [showBarbershopModal, setShowBarbershopModal] = useState(false);
   const [bsNome, setBsNome] = useState('');
   const [bsEndereco, setBsEndereco] = useState('');
@@ -44,7 +44,7 @@ export const useBarbershop = ({
         setBarbershops(data);
         if (data[0]) {
           shopId = data[0].id_barbearia;
-          setSelectedShopId(shopId);
+          setSelectedShopId(shopId ?? '');
         }
       } catch {
         // ignore
@@ -56,7 +56,7 @@ export const useBarbershop = ({
       return;
     }
     
-    const shop = barbershops.find(b => b.id_barbearia === shopId);
+    const shop = barbershops.find((b: Barbearia) => b.id_barbearia === shopId);
     if (shop) {
       setBsNome(shop.nome || '');
       setBsEndereco(shop.endereco || '');
@@ -88,11 +88,12 @@ export const useBarbershop = ({
         horario_funcionamento: bsHorario.trim(),
       });
       
-      setBarbershops(prev => (prev || []).map(b => b.id_barbearia === updated.id_barbearia ? updated : b));
+      setBarbershops((prev: Barbearia[]) => (prev || []).map((b: Barbearia) => b.id_barbearia === updated.id_barbearia ? updated : b));
       setShowBarbershopModal(false);
       onSuccess('Dados da barbearia atualizados.');
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Erro ao atualizar barbearia.';
+    } catch (err: unknown) {
+      const error = err as ApiErrorResponse;
+      const msg = error?.response?.data?.message || error.message || 'Erro ao atualizar barbearia.';
       onError(msg);
     } finally {
       setIsUpdating(false);

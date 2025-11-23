@@ -17,7 +17,6 @@ const Dashboard: React.FC = () => {
   const { toasts, removeToast } = useToast();
 
   // Estados básicos
-  const [barbershops, setBarbershops] = useState<Barbearia[]>([]);
   const [selectedShopId, setSelectedShopId] = useState<number | ''>('');
   const [onboarding, setOnboarding] = useState({
     missingHours: false,
@@ -83,8 +82,8 @@ const Dashboard: React.FC = () => {
         }
         
         if (mounted) setOnboarding({ missingHours, missingBarbers, missingServices, barbershopId: shopId });
-      } catch (err) {
-        // ignore
+      } catch {
+        // ignore onboarding check errors
       }
     };
     runOnboardingCheck();
@@ -102,7 +101,6 @@ const Dashboard: React.FC = () => {
         } else {
           data = await barbershopService.list();
         }
-        setBarbershops(data);
         if (data[0]) {
           setSelectedShopId(data[0].id_barbearia);
         }
@@ -205,7 +203,7 @@ const Dashboard: React.FC = () => {
                     const first = shops[0];
                     if (first) navigate(`/barbearias/${first.id_barbearia}/bookings`);
                     else alert('Nenhuma barbearia encontrada.');
-                  } catch (err) {
+                  } catch {
                     alert('Erro ao localizar barbearia.');
                   }
                 }}
@@ -255,7 +253,7 @@ const Dashboard: React.FC = () => {
                   for (const s of shops) {
                     try {
                       const list = await barberService.listByBarbershop(s.id_barbearia, { onlyActive: false });
-                      const me = (list || []).find((b: any) => Number(b?.id_usuario) === Number(user.id_usuario));
+                      const me = (list || []).find((b: { id_usuario?: number; id_barbeiro?: number }) => Number(b?.id_usuario) === Number(user.id_usuario));
                       if (me && me.id_barbeiro) {
                         const id = me.id_barbeiro;
                         navigate(`/barbeiros/${Number(id)}/bookings`);
@@ -302,7 +300,7 @@ const Dashboard: React.FC = () => {
                 title="Meus Agendamentos"
                 description="Acompanhe seus próximos horários"
                 actionText="Visualizar"
-                onClick={() => console.log('Ver meus agendamentos')}
+                onClick={() => navigate('/my-appointments')}
               />
 
               <DashboardCard
@@ -314,7 +312,7 @@ const Dashboard: React.FC = () => {
                 title="Histórico"
                 description="Veja seus agendamentos anteriores"
                 actionText="Ver histórico"
-                onClick={() => console.log('Ver histórico')}
+                onClick={() => navigate('/appointment-history')}
               />
             </>
           )}

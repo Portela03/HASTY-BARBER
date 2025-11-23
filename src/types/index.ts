@@ -1,10 +1,21 @@
-
 export interface User {
   id_usuario: number;
   nome: string;
   email: string;
   tipo_usuario: string; 
   avatar_url?: string; // URL da foto de perfil
+}
+
+// API Error Response
+export interface ApiErrorResponse {
+  response?: {
+    data?: {
+      message?: string;
+      error?: string;
+    };
+    status?: number;
+  };
+  message?: string;
 }
 
 
