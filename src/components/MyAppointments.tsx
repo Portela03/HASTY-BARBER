@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { bookingService, rescheduleService, barberService } from '../services/api';
-import { formatPhoneBR } from '../utils/phone';
 import type { BookingResponse, Barbeiro } from '../types';
 import { useToast } from '../hooks/useToast';
 import Toast from './Toast';

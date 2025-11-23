@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { barbershopService, barberService, serviceService, bookingService, evaluationService } from '../services/api';
-import { formatPhoneBR } from '../utils/phone';
 import type { Barbearia, Barbeiro, ServiceItem, BookingForm } from '../types';
 import { isValidTimeHHMM } from '../utils/validation';
 import { useToast } from '../hooks/useToast';
