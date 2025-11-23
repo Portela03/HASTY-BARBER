@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { User } from '../../types';
 
 interface DashboardHeaderProps {
@@ -9,6 +10,13 @@ interface DashboardHeaderProps {
   menuOpen: boolean;
   setMenuOpen: (open: boolean) => void;
   menuRef: React.RefObject<HTMLDivElement | null>;
+  onboarding: {
+    missingHours: boolean;
+    missingBarbers: boolean;
+    missingServices: boolean;
+    barbershopId: number | null;
+  };
+  barbershops: Array<{ id_barbearia: number }>;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
@@ -19,7 +27,15 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   menuOpen,
   setMenuOpen,
   menuRef,
+  onboarding,
+  barbershops,
 }) => {
+  const navigate = useNavigate();
+  
+  const hasOnboardingTasks = user.tipo_usuario === 'proprietario' && 
+    barbershops.length > 0 &&
+    (onboarding.missingHours || onboarding.missingBarbers || onboarding.missingServices);
+
   return (
     <header className="sticky top-0 z-30 bg-gray-900/80 backdrop-blur-xl border-b border-gray-800/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -38,6 +54,19 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 
           {/* User menu */}
           <div className="flex items-center gap-4">
+            {/* Botão Completar Cadastro */}
+            {hasOnboardingTasks && (
+              <button
+                onClick={() => navigate(`/barbearias/${onboarding.barbershopId}/config`)}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white rounded-xl font-medium transition-all shadow-lg hover:shadow-xl hover:shadow-amber-500/20"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm">Completar Cadastro</span>
+              </button>
+            )}
+            
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setMenuOpen(!menuOpen)}

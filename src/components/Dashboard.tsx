@@ -10,7 +10,6 @@ import { barbershopService, barberService, getBarbeariaConfig, serviceService } 
 
 // Componentes refatorados
 import { DashboardHeader } from './Dashboard/DashboardHeader';
-import { OnboardingBanner } from './Dashboard/OnboardingBanner';
 import { DashboardCard } from './Dashboard/DashboardCard';
 
 const Dashboard: React.FC = () => {
@@ -27,20 +26,6 @@ const Dashboard: React.FC = () => {
     missingServices: false,
     barbershopId: null as number | null,
   });
-  
-  // Verificar se o banner foi dismissado anteriormente
-  const getOnboardingBannerState = () => {
-    const dismissed = localStorage.getItem('onboarding_banner_dismissed');
-    return dismissed !== 'true';
-  };
-  
-  const [showOnboardingBanner, setShowOnboardingBanner] = useState(getOnboardingBannerState());
-  
-  // Função para dismissar o banner permanentemente
-  const dismissOnboardingBanner = () => {
-    localStorage.setItem('onboarding_banner_dismissed', 'true');
-    setShowOnboardingBanner(false);
-  };
   
   // Header
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
@@ -110,11 +95,6 @@ const Dashboard: React.FC = () => {
         
         if (mounted) {
           setOnboarding({ missingHours, missingBarbers, missingServices, barbershopId: shopId });
-          
-          // Se o onboarding estiver completo, limpar o localStorage para mostrar o banner novamente no próximo login
-          if (!missingHours && !missingBarbers && !missingServices) {
-            localStorage.removeItem('onboarding_banner_dismissed');
-          }
         }
       } catch {
         // ignore onboarding check errors
@@ -161,6 +141,8 @@ const Dashboard: React.FC = () => {
         menuOpen={headerMenuOpen}
         setMenuOpen={setHeaderMenuOpen}
         menuRef={headerMenuRef}
+        onboarding={onboarding}
+        barbershops={barbershops}
       />
 
       {/* Main Content */}
@@ -208,17 +190,6 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           </div>
-        )}
-
-        {/* Onboarding Banner */}
-        {user.tipo_usuario === 'proprietario' && 
-         showOnboardingBanner && 
-         barbershops.length > 0 &&
-         (onboarding.missingHours || onboarding.missingBarbers || onboarding.missingServices) && (
-          <OnboardingBanner
-            onboarding={onboarding}
-            onDismiss={dismissOnboardingBanner}
-          />
         )}
 
         {/* Dashboard Cards Grid */}
