@@ -269,20 +269,29 @@ const Login: React.FC = () => {
                     <div className="w-full border-t border-gray-800"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-gray-900/50 text-gray-500">ou</span>
+                    <span className="px-4 bg-gray-900/50 text-gray-500">Não tem uma conta?</span>
                   </div>
                 </div>
 
-                <div className="text-center">
-                  <p className="text-gray-400 text-sm">
-                    Não tem uma conta?{' '}
-                    <a 
-                      href="/register/client" 
-                      className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 transition-all"
-                    >
-                      Cadastre-se agora
-                    </a>
-                  </p>
+                <div className="space-y-3">
+                  <a
+                    href="/register/client"
+                    className="block w-full py-3 px-4 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 hover:border-gray-600 rounded-xl transition-all text-center"
+                  >
+                    <span className="text-gray-300 hover:text-white font-medium text-sm">Cadastrar como Cliente</span>
+                  </a>
+                  
+                  <a
+                    href="/register/barbershop"
+                    className="block w-full py-3.5 px-4 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 border border-amber-500/40 hover:border-amber-400/60 rounded-xl transition-all text-center group"
+                  >
+                    <span className="text-amber-400 font-semibold text-sm flex items-center justify-center gap-2">
+                      Cadastrar sua Barbearia
+                      <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </span>
+                  </a>
                 </div>
               </form>
             </div>

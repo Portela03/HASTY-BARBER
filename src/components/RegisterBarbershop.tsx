@@ -274,9 +274,27 @@ const RegisterBarbershop: React.FC = () => {
                 <p className="text-sm text-gray-400">Já tem uma conta?{' '}
                   <Link to="/login" className="font-medium text-amber-400 hover:text-amber-300">Faça login aqui</Link>
                 </p>
-                <p className="text-sm text-gray-400">É cliente?{' '}
-                  <Link to="/register/client" className="font-medium text-amber-400 hover:text-amber-300">Cadastre-se como cliente</Link>
-                </p>
+                <div className="pt-2">
+                  <Link 
+                    to="/register/client"
+                    className="group relative flex items-center justify-between w-full px-5 py-4 bg-gradient-to-r from-gray-800/80 to-gray-800/60 hover:from-gray-800 hover:to-gray-750 border border-gray-700 hover:border-blue-500/50 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+                        <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-bold text-white text-sm">Sou Cliente</p>
+                        <p className="text-xs text-gray-400">Agende seu horário</p>
+                      </div>
+                    </div>
+                    <svg className="w-5 h-5 text-gray-500 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                </div>
               </div>
             </form>
           </div>
