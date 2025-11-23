@@ -25,8 +25,14 @@ const AppRouter: React.FC = () => {
   if (isLoading) {
     return (
       <Layout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+          <div className="text-center">
+            <div className="relative inline-flex">
+              <div className="w-24 h-24 border-8 border-gray-200 rounded-full"></div>
+              <div className="w-24 h-24 border-8 border-indigo-600 rounded-full animate-spin border-t-transparent absolute top-0 left-0"></div>
+            </div>
+            <p className="mt-6 text-gray-600 font-medium animate-pulse">Carregando...</p>
+          </div>
         </div>
       </Layout>
     );
