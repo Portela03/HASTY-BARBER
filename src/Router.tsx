@@ -107,7 +107,7 @@ const AppRouter: React.FC = () => {
           
           {/* Rota de Relatórios - Apenas Proprietário */}
           <Route
-            path="/reports"
+            path="/barbearias/:id/reports"
             element={
               isAuthenticated
                 ? (user?.tipo_usuario === 'proprietario' ? <ReportsPage /> : <Navigate to="/dashboard" replace />)

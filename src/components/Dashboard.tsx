@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
+import { useProfile } from '../hooks/useProfile';
+import { useBarbershop } from '../hooks/useBarbershop';
 import Toast from './Toast';
 import type { Barbearia } from '../types';
 import { barbershopService, barberService, getBarbeariaConfig, serviceService } from '../services/api';
@@ -12,11 +14,12 @@ import { OnboardingBanner } from './Dashboard/OnboardingBanner';
 import { DashboardCard } from './Dashboard/DashboardCard';
 
 const Dashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, token, login } = useAuth();
   const navigate = useNavigate();
-  const { toasts, removeToast } = useToast();
+  const { toasts, removeToast, success, error: showError, warning } = useToast();
 
   // Estados básicos
+  const [barbershops, setBarbershops] = useState<Barbearia[]>([]);
   const [selectedShopId, setSelectedShopId] = useState<number | ''>('');
   const [onboarding, setOnboarding] = useState({
     missingHours: false,
@@ -32,6 +35,26 @@ const Dashboard: React.FC = () => {
   const headerMenuRef = useRef<HTMLDivElement | null>(null);
   const fileInputUserRef = useRef<HTMLInputElement | null>(null);
 
+  // Hooks customizados
+  const profileHook = useProfile({
+    user,
+    token,
+    login,
+    onSuccess: success,
+    onError: showError,
+    onWarning: warning,
+  });
+
+  const barbershopHook = useBarbershop({
+    selectedShopId,
+    setSelectedShopId,
+    barbershops,
+    setBarbershops,
+    onSuccess: success,
+    onError: showError,
+    onWarning: warning,
+  });
+
   // Handlers
   const handleLogout = async () => {
     await logout();
@@ -39,14 +62,8 @@ const Dashboard: React.FC = () => {
   };
 
   const openUserFilePicker = () => fileInputUserRef.current?.click();
-  const openProfileModal = () => {
-    // TODO: Implementar modal de perfil
-    console.log('Abrir perfil');
-  };
-  const openBarbershopModal = () => {
-    // TODO: Implementar modal de barbearia
-    console.log('Abrir barbearia');
-  };
+  const openProfileModal = () => profileHook.openProfileModal();
+  const openBarbershopModal = () => barbershopHook.openBarbershopModal();
 
   // Onboarding check
   useEffect(() => {
@@ -101,6 +118,7 @@ const Dashboard: React.FC = () => {
         } else {
           data = await barbershopService.list();
         }
+        setBarbershops(data);
         if (data[0]) {
           setSelectedShopId(data[0].id_barbearia);
         }
@@ -168,7 +186,13 @@ const Dashboard: React.FC = () => {
                 title="Cadastrar Barbeiro"
                 description="Adicione novos profissionais à sua equipe"
                 actionText="Cadastrar"
-                onClick={() => console.log('Cadastrar barbeiro')}
+                onClick={() => {
+                  if (selectedShopId) {
+                    navigate(`/barbearias/${selectedShopId}/register-barber`);
+                  } else {
+                    showError('Selecione uma barbearia primeiro');
+                  }
+                }}
               />
               
               <DashboardCard
@@ -180,7 +204,13 @@ const Dashboard: React.FC = () => {
                 title="Cadastrar Serviço"
                 description="Defina os serviços oferecidos"
                 actionText="Adicionar"
-                onClick={() => console.log('Cadastrar serviço')}
+                onClick={() => {
+                  if (selectedShopId) {
+                    navigate(`/barbearias/${selectedShopId}/register-service`);
+                  } else {
+                    showError('Selecione uma barbearia primeiro');
+                  }
+                }}
               />
 
               <DashboardCard
@@ -339,6 +369,137 @@ const Dashboard: React.FC = () => {
           />
         ))}
       </div>
+
+      {/* Profile Modal */}
+      {profileHook.showProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold text-white mb-4">Editar Perfil</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Nome</label>
+                <input
+                  type="text"
+                  value={profileHook.profileNome}
+                  onChange={(e) => profileHook.setProfileNome(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  placeholder="Seu nome completo"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={profileHook.profileEmail}
+                  onChange={(e) => profileHook.setProfileEmail(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  placeholder="seu@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Telefone</label>
+                <input
+                  type="tel"
+                  value={profileHook.profileTelefone}
+                  onChange={(e) => profileHook.setProfileTelefone(profileHook.formatPhoneBR(e.target.value))}
+                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => profileHook.setShowProfileModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={profileHook.handleSaveProfile}
+                disabled={profileHook.isUpdating}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 disabled:opacity-50 text-white rounded-lg transition-all font-medium"
+              >
+                {profileHook.isUpdating ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Barbershop Modal */}
+      {barbershopHook.showBarbershopModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold text-white mb-4">Editar Barbearia</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Nome da Barbearia</label>
+                <input
+                  type="text"
+                  value={barbershopHook.bsNome}
+                  onChange={(e) => barbershopHook.setBsNome(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  placeholder="Nome da barbearia"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Endereço</label>
+                <input
+                  type="text"
+                  value={barbershopHook.bsEndereco}
+                  onChange={(e) => barbershopHook.setBsEndereco(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  placeholder="Rua, número, bairro"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Telefone</label>
+                <input
+                  type="tel"
+                  value={barbershopHook.bsTelefone}
+                  onChange={(e) => barbershopHook.setBsTelefone(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  placeholder="(00) 0000-0000"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Horário de Funcionamento</label>
+                <input
+                  type="text"
+                  value={barbershopHook.bsHorario}
+                  onChange={(e) => barbershopHook.setBsHorario(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  placeholder="Ex: Seg-Sex 9h-18h"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => barbershopHook.setShowBarbershopModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={barbershopHook.handleSaveBarbershop}
+                disabled={barbershopHook.isUpdating}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 disabled:opacity-50 text-white rounded-lg transition-all font-medium"
+              >
+                {barbershopHook.isUpdating ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
