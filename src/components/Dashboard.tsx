@@ -27,7 +27,20 @@ const Dashboard: React.FC = () => {
     missingServices: false,
     barbershopId: null as number | null,
   });
-  const [showOnboardingBanner, setShowOnboardingBanner] = useState(true);
+  
+  // Verificar se o banner foi dismissado anteriormente
+  const getOnboardingBannerState = () => {
+    const dismissed = localStorage.getItem('onboarding_banner_dismissed');
+    return dismissed !== 'true';
+  };
+  
+  const [showOnboardingBanner, setShowOnboardingBanner] = useState(getOnboardingBannerState());
+  
+  // Função para dismissar o banner permanentemente
+  const dismissOnboardingBanner = () => {
+    localStorage.setItem('onboarding_banner_dismissed', 'true');
+    setShowOnboardingBanner(false);
+  };
   
   // Header
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
@@ -98,7 +111,14 @@ const Dashboard: React.FC = () => {
           missingServices = (servicesRes.value || []).length === 0;
         }
         
-        if (mounted) setOnboarding({ missingHours, missingBarbers, missingServices, barbershopId: shopId });
+        if (mounted) {
+          setOnboarding({ missingHours, missingBarbers, missingServices, barbershopId: shopId });
+          
+          // Se o onboarding estiver completo, limpar o localStorage para mostrar o banner novamente no próximo login
+          if (!missingHours && !missingBarbers && !missingServices) {
+            localStorage.removeItem('onboarding_banner_dismissed');
+          }
+        }
       } catch {
         // ignore onboarding check errors
       }
@@ -202,7 +222,7 @@ const Dashboard: React.FC = () => {
          (onboarding.missingHours || onboarding.missingBarbers || onboarding.missingServices) && (
           <OnboardingBanner
             onboarding={onboarding}
-            onDismiss={() => setShowOnboardingBanner(false)}
+            onDismiss={dismissOnboardingBanner}
           />
         )}
 

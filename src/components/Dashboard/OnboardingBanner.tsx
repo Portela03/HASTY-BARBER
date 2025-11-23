@@ -63,7 +63,7 @@ export const OnboardingBanner: React.FC<OnboardingBannerProps> = ({ onboarding, 
           )}
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           {onboarding.barbershopId && (
             <button
               onClick={() => navigate(`/barbearias/${onboarding.barbershopId}/config`)}
@@ -72,6 +72,12 @@ export const OnboardingBanner: React.FC<OnboardingBannerProps> = ({ onboarding, 
               Completar Cadastro
             </button>
           )}
+          <button
+            onClick={onDismiss}
+            className="px-4 py-2 bg-gray-800/80 hover:bg-gray-700/80 text-gray-300 hover:text-white border border-gray-700/50 hover:border-gray-600 rounded-xl font-medium transition-all"
+          >
+            Não mostrar novamente
+          </button>
         </div>
       </div>
     </div>
