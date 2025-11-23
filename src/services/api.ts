@@ -78,9 +78,9 @@ api.interceptors.response.use(
     error.message = noResponse
       ? `Não foi possível conectar ao servidor de API em ${BASE_URL}. Verifique se o backend está em execução.`
       : status === 401
-      ? 'Sua sessão expirou. Faça login novamente.'
+      ? backendMessage || 'Sua sessão expirou. Faça login novamente.'
       : status === 403
-      ? 'Você não tem permissão para esta ação.'
+      ? backendMessage || 'Você não tem permissão para esta ação.'
       : backendMessage || 'Erro inesperado na requisição.';
     if (status === 401 || status === 403) {
       (error as any).code = 'AUTH';
@@ -88,9 +88,9 @@ api.interceptors.response.use(
     // Preserve original response for existing handlers
     const normalized = new Error(
       status === 401
-        ? 'Sua sessão expirou. Faça login novamente.'
+        ? backendMessage || 'Sua sessão expirou. Faça login novamente.'
         : status === 403
-        ? 'Você não tem permissão para esta ação.'
+        ? backendMessage || 'Você não tem permissão para esta ação.'
         : backendMessage || 'Erro inesperado na requisição.'
     ) as any;
   normalized.status = status;
