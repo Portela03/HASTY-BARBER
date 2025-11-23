@@ -1,20 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
+/**
+ * EXEMPLO DE DASHBOARD REFATORADO
+ * 
+ * Este arquivo mostra como o Dashboard.tsx ficaria após a refatoração completa,
+ * utilizando os componentes e hooks criados.
+ * 
+ * Redução estimada: de ~3400 linhas para ~400-600 linhas
+ */
+
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import Toast from './Toast';
-import type { Barbearia } from '../types';
-import { barbershopService, barberService, getBarbeariaConfig, serviceService } from '../services/api';
+import { useProfile } from '../hooks/useProfile';
+import { useBarbershop } from '../hooks/useBarbershop';
 
-// Componentes refatorados
-import { DashboardHeader } from './Dashboard/DashboardHeader';
-import { OnboardingBanner } from './Dashboard/OnboardingBanner';
-import { DashboardCard } from './Dashboard/DashboardCard';
+// Componentes
+import { DashboardHeader, OnboardingBanner, DashboardCard } from './Dashboard';
+import { ConfirmationModal } from './common/ConfirmationModal';
+import { Toast } from './Toast';
 
-const Dashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+// Tipos
+import { Barbearia } from '../types';
+
+const DashboardRefactored: React.FC = () => {
+  const { user, token, login, logout } = useAuth();
   const navigate = useNavigate();
-  const { toasts, removeToast } = useToast();
+  const { toasts, removeToast, success, error: showError, warning } = useToast();
 
   // Estados básicos
   const [barbershops, setBarbershops] = useState<Barbearia[]>([]);
@@ -29,9 +40,29 @@ const Dashboard: React.FC = () => {
   
   // Header
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
-  const [uploadingUserAvatar] = useState(false);
+  const [uploadingUserAvatar, setUploadingUserAvatar] = useState(false);
   const headerMenuRef = useRef<HTMLDivElement | null>(null);
   const fileInputUserRef = useRef<HTMLInputElement | null>(null);
+
+  // Hooks customizados
+  const profileHook = useProfile({
+    user,
+    token,
+    login,
+    onSuccess: success,
+    onError: showError,
+    onWarning: warning,
+  });
+
+  const barbershopHook = useBarbershop({
+    selectedShopId,
+    setSelectedShopId,
+    barbershops,
+    setBarbershops,
+    onSuccess: success,
+    onError: showError,
+    onWarning: warning,
+  });
 
   // Handlers
   const handleLogout = async () => {
@@ -40,82 +71,8 @@ const Dashboard: React.FC = () => {
   };
 
   const openUserFilePicker = () => fileInputUserRef.current?.click();
-  const openProfileModal = () => {
-    // TODO: Implementar modal de perfil
-    console.log('Abrir perfil');
-  };
-  const openBarbershopModal = () => {
-    // TODO: Implementar modal de barbearia
-    console.log('Abrir barbearia');
-  };
 
-  // Onboarding check
-  useEffect(() => {
-    let mounted = true;
-    const runOnboardingCheck = async () => {
-      if (!user || user.tipo_usuario !== 'proprietario') return;
-      try {
-        const shops = await barbershopService.listMine();
-        const mine = (shops || [])[0];
-        const shopId = mine?.id_barbearia ?? null;
-        if (!shopId) return;
-        
-        const [cfgRes, barbersRes, servicesRes] = await Promise.allSettled([
-          getBarbeariaConfig(Number(shopId)),
-          barberService.listByBarbershop(Number(shopId), { onlyActive: false }),
-          serviceService.listByBarbershop(Number(shopId)),
-        ]);
-        
-        let missingHours = false;
-        if (cfgRes.status === 'fulfilled') {
-          const cfg = cfgRes.value;
-          missingHours = !cfg?.business_hours || Object.keys(cfg.business_hours).length === 0;
-        }
-        
-        let missingBarbers = true;
-        if (barbersRes.status === 'fulfilled') {
-          missingBarbers = (barbersRes.value || []).length === 0;
-        }
-        
-        let missingServices = true;
-        if (servicesRes.status === 'fulfilled') {
-          missingServices = (servicesRes.value || []).length === 0;
-        }
-        
-        if (mounted) setOnboarding({ missingHours, missingBarbers, missingServices, barbershopId: shopId });
-      } catch (err) {
-        // ignore
-      }
-    };
-    runOnboardingCheck();
-    return () => { mounted = false; };
-  }, [user]);
-
-  // Carregar barbearias
-  useEffect(() => {
-    const loadShops = async () => {
-      if (!user) return;
-      try {
-        let data: Barbearia[] = [];
-        if (user.tipo_usuario === 'proprietario') {
-          data = await barbershopService.listMine();
-        } else {
-          data = await barbershopService.list();
-        }
-        setBarbershops(data);
-        if (data[0]) {
-          setSelectedShopId(data[0].id_barbearia);
-        }
-      } catch (err) {
-        console.error('Erro ao carregar barbearias:', err);
-      }
-    };
-    loadShops();
-  }, [user]);
-
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black">
@@ -124,8 +81,8 @@ const Dashboard: React.FC = () => {
         user={user}
         uploadingAvatar={uploadingUserAvatar}
         onAvatarClick={openUserFilePicker}
-        onProfileClick={openProfileModal}
-        onBarbershopClick={openBarbershopModal}
+        onProfileClick={profileHook.openProfileModal}
+        onBarbershopClick={barbershopHook.openBarbershopModal}
         onLogout={handleLogout}
         menuOpen={headerMenuOpen}
         setMenuOpen={setHeaderMenuOpen}
@@ -164,13 +121,13 @@ const Dashboard: React.FC = () => {
               <DashboardCard
                 icon={
                   <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                 }
                 title="Cadastrar Barbeiro"
                 description="Adicione novos profissionais à sua equipe"
                 actionText="Cadastrar"
-                onClick={() => console.log('Cadastrar barbeiro')}
+                onClick={() => {/* handler */}}
               />
               
               <DashboardCard
@@ -182,7 +139,7 @@ const Dashboard: React.FC = () => {
                 title="Cadastrar Serviço"
                 description="Defina os serviços oferecidos"
                 actionText="Adicionar"
-                onClick={() => console.log('Cadastrar serviço')}
+                onClick={() => {/* handler */}}
               />
 
               <DashboardCard
@@ -194,21 +151,7 @@ const Dashboard: React.FC = () => {
                 title="Ver Agendamentos"
                 description="Acompanhe todos os agendamentos"
                 actionText="Visualizar"
-                onClick={async () => {
-                  try {
-                    let shops: Barbearia[] = [];
-                    try {
-                      shops = await barbershopService.listMine();
-                    } catch {
-                      shops = await barbershopService.list();
-                    }
-                    const first = shops[0];
-                    if (first) navigate(`/barbearias/${first.id_barbearia}/bookings`);
-                    else alert('Nenhuma barbearia encontrada.');
-                  } catch (err) {
-                    alert('Erro ao localizar barbearia.');
-                  }
-                }}
+                onClick={() => {/* handler */}}
               />
 
               <DashboardCard
@@ -220,13 +163,7 @@ const Dashboard: React.FC = () => {
                 title="Verificar Relatórios"
                 description="Análise completa do desempenho"
                 actionText="Ver relatórios"
-                onClick={() => {
-                  if (selectedShopId) {
-                    navigate(`/barbearias/${selectedShopId}/reports`);
-                  } else {
-                    alert('Selecione uma barbearia.');
-                  }
-                }}
+                onClick={() => {/* handler */}}
                 badge="Insights"
                 fullWidth
               />
@@ -244,35 +181,7 @@ const Dashboard: React.FC = () => {
               title="Meus Agendamentos"
               description="Visualize e gerencie seus atendimentos"
               actionText="Ver agendamentos"
-              onClick={async () => {
-                try {
-                  let shops: Barbearia[] = [];
-                  try {
-                    shops = await barbershopService.listMine();
-                  } catch {
-                    shops = await barbershopService.list();
-                  }
-                  for (const s of shops) {
-                    try {
-                      const list = await barberService.listByBarbershop(s.id_barbearia, { onlyActive: false });
-                      const me = (list || []).find((b: any) => Number(b?.id_usuario) === Number(user.id_usuario));
-                      if (me && me.id_barbeiro) {
-                        const id = me.id_barbeiro;
-                        navigate(`/barbeiros/${Number(id)}/bookings`);
-                        return;
-                      }
-                    } catch {
-                      // ignore and try next shop
-                    }
-                  }
-                  // Fallback
-                  const first = shops[0];
-                  if (first) navigate(`/barbearias/${first.id_barbearia}/bookings`);
-                  else alert('Nenhuma barbearia encontrada.');
-                } catch {
-                  alert('Erro ao localizar barbearia.');
-                }
-              }}
+              onClick={() => {/* handler */}}
               fullWidth
             />
           )}
@@ -283,7 +192,7 @@ const Dashboard: React.FC = () => {
               <DashboardCard
                 icon={
                   <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4h3a1 1 0 011 1v8a3 3 0 01-3 3H6a3 3 0 01-3-3V8a1 1 0 011-1h3z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                 }
                 title="Agendar Serviço"
@@ -302,7 +211,7 @@ const Dashboard: React.FC = () => {
                 title="Meus Agendamentos"
                 description="Acompanhe seus próximos horários"
                 actionText="Visualizar"
-                onClick={() => console.log('Ver meus agendamentos')}
+                onClick={() => {/* handler */}}
               />
 
               <DashboardCard
@@ -314,7 +223,7 @@ const Dashboard: React.FC = () => {
                 title="Histórico"
                 description="Veja seus agendamentos anteriores"
                 actionText="Ver histórico"
-                onClick={() => console.log('Ver histórico')}
+                onClick={() => {/* handler */}}
               />
             </>
           )}
@@ -326,7 +235,7 @@ const Dashboard: React.FC = () => {
         ref={fileInputUserRef}
         type="file"
         accept="image/*"
-        onChange={() => console.log('Upload avatar')}
+        onChange={(e) => {/* handleUserAvatarSelected(e) */}}
         className="hidden"
       />
 
@@ -341,8 +250,23 @@ const Dashboard: React.FC = () => {
           />
         ))}
       </div>
+
+      {/* Modais reutilizáveis */}
+      <ConfirmationModal
+        isOpen={false /* algum estado */}
+        title="Exemplo"
+        message="Mensagem de confirmação"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+        variant="danger"
+      />
+
+      {/* Profile Modal - seria transformado em componente também */}
+      {/* Barbershop Modal - seria transformado em componente também */}
+      {/* Review Modal - seria transformado em componente também */}
+      {/* Etc... */}
     </div>
   );
 };
 
-export default Dashboard;
+export default DashboardRefactored;
