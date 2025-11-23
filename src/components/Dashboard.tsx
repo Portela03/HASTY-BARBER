@@ -1229,546 +1229,472 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-
-        <div className="bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 rounded-2xl shadow-2xl mb-6 border border-gray-600 overflow-visible">
-          <div className="px-4 py-5 sm:px-6 border-b border-gray-700">
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 items-center">
-              <div className="flex items-center gap-3 order-1">
-                {(user.tipo_usuario === 'barbeiro' || user.tipo_usuario === 'cliente') && (
-                  <>
-                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-amber-500 text-white flex items-center justify-center text-sm font-semibold select-none overflow-hidden">
-                      {user.avatar_url ? (
-                        <img src={user.avatar_url} alt={user.nome} className="h-full w-full object-cover" />
-                      ) : (
-                        (user.nome || 'U')
-                          .split(' ')
-                          .filter(Boolean)
-                          .slice(0, 2)
-                          .map((p) => p[0]?.toUpperCase())
-                          .join('')
-                      )}
-                    </div>
-                    {(user.tipo_usuario === 'barbeiro' || user.tipo_usuario === 'cliente') && (
-                      <div>
-                        <button
-                          type="button"
-                          onClick={openUserFilePicker}
-                          disabled={uploadingUserAvatar}
-                          className={`inline-flex items-center gap-2 px-2.5 sm:px-3 py-2 rounded-md text-sm font-medium border ${uploadingUserAvatar ? 'bg-gray-700 text-gray-400 border-gray-600 cursor-not-allowed' : 'bg-gray-800 text-amber-300 border-amber-400/20 hover:bg-amber-500/10'}`}
-                        >
-                          {/* Camera icon */}
-                          <svg className="h-4 w-4 text-amber-300" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path d="M4 5a2 2 0 00-2 2v7a3 3 0 003 3h10a3 3 0 003-3V7a2 2 0 00-2-2h-2.382a1 1 0 01-.894-.553L11.789 2.447A1 1 0 0010.895 2H9.105a1 1 0 00-.894.447L6.276 4.447A1 1 0 015.382 5H4zm6 3a4 4 0 110 8 4 4 0 010-8z"/>
-                          </svg>
-                          <span className="hidden sm:inline">{uploadingUserAvatar ? 'Enviando...' : 'Atualizar foto'}</span>
-                        </button>
-                        <input
-                          ref={fileInputUserRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleUserAvatarSelected}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black">
+      {/* Header moderno e fixo */}
+      <header className="sticky top-0 z-30 bg-gray-900/80 backdrop-blur-xl border-b border-gray-800/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 bg-amber-400 rounded-xl blur-lg opacity-50" />
+                <div className="relative w-10 h-10 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-xl flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
+                  </svg>
+                </div>
               </div>
-              <div className="col-span-2 sm:col-span-1 text-center order-3 sm:order-2">
-                <h1 className="text-2xl font-bold leading-7 text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 sm:text-3xl sm:leading-9 bg-[length:200%_auto] animate-[shimmer_5s_infinite]">
-                  Dashboard - Hasty Barber
+              <div>
+                <h1 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-400">
+                  Hasty Barber
                 </h1>
-                <p className="mt-1 text-sm text-gray-300 truncate max-w-[90vw] sm:max-w-none px-2 sm:px-0 mx-auto">Bem-vindo ao seu painel de controle</p>
+                <p className="text-xs text-gray-400">Dashboard</p>
               </div>
-              <div className="justify-self-end order-2 sm:order-3">
-                <div className="flex items-center gap-2">
-                  <div className="relative inline-block text-left" ref={headerMenuRef}>
-                    <button
-                      onClick={() => setHeaderMenuOpen((v) => !v)}
-                      className={`${headerMenuOpen ? 'ring-2 ring-amber-400 bg-amber-600/10' : 'bg-gray-800'} inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-500/20 text-amber-400 shadow-sm hover:bg-amber-500/10 focus:outline-none focus:ring-2 focus:ring-amber-400`}
-                      title="Ações rápidas"
-                      aria-haspopup="menu"
-                      aria-expanded={headerMenuOpen}
-                      aria-controls="header-actions-menu"
-                    >
-                      {/* Three bars icon */}
-                      <svg className="h-5 w-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-                        <path strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" d="M3.75 5.25h16.5m-16.5 6h16.5m-16.5 6h16.5" />
-                      </svg>
-                    </button>
-                    {headerMenuOpen && (
-                      <div
-                        id="header-actions-menu"
-                        className="origin-top-right absolute right-0 mt-2 w-56 rounded-xl border border-gray-700 bg-gradient-to-br from-gray-800 to-gray-700 shadow-lg ring-1 ring-black/20 z-20 overflow-hidden divide-y divide-gray-700 text-white"
-                        role="menu"
-                        aria-label="Ações"
-                      >
-                        <div className="p-1">
-                          <button
-                            className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-200 hover:bg-amber-500/10 hover:text-amber-300 transition-colors"
-                            role="menuitem"
-                            onClick={() => {
-                              setHeaderMenuOpen(false);
-                              openProfileModal();
-                            }}
-                          >
-                            {/* user icon */}
-                            <svg className="h-5 w-5 text-amber-300 group-hover:text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 1115 0v.75H4.5v-.75z" />
-                            </svg>
-                            <span>Meus dados</span>
-                          </button>
-                          {user.tipo_usuario === 'proprietario' && (
-                            <>
-                              <button
-                                className="group mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-200 hover:bg-amber-500/10 hover:text-amber-300 transition-colors"
-                                role="menuitem"
-                                onClick={() => {
-                                  setHeaderMenuOpen(false);
-                                  openBarbershopModal();
-                                }}
-                              >
-                                {/* shop/building icon */}
-                                <svg className="h-5 w-5 text-amber-300 group-hover:text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M3 9.75l9-6 9 6M4.5 10.5v9a1.5 1.5 0 001.5 1.5h12a1.5 1.5 0 001.5-1.5v-9M9 21v-6a3 3 0 016 0v6" />
-                                </svg>
-                                <span>Dados da barbearia</span>
-                              </button>
-                              <button
-                                className="group mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-200 hover:bg-amber-500/10 hover:text-amber-300 transition-colors"
-                                role="menuitem"
-                                onClick={async () => {
-                                  setHeaderMenuOpen(false);
-                                  let id = selectedShopId ? Number(selectedShopId) : undefined;
-                                  if (!id) {
-                                    try {
-                                      let list: Barbearia[] = [];
-                                      try { list = await barbershopService.listMine(); } catch { list = await barbershopService.list(); }
-                                      if (list[0]) id = list[0].id_barbearia;
-                                    } catch {}
-                                  }
-                                  if (id) navigate(`/barbearias/${id}/config`);
-                                  else alert('Nenhuma barbearia encontrada.');
-                                }}
-                              >
-                                {/* cog icon */}
-                                <svg className="h-5 w-5 text-amber-300 group-hover:text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.89 3.31.877 2.42 2.42a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.89 1.543-.877 3.31-2.42 2.42a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.89-3.31-.877-2.42-2.42a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.89-1.543.877-3.31 2.42-2.42a1.724 1.724 0 002.573-1.066z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                <span>Configurações da barbearia</span>
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
+            </div>
+
+            {/* User menu */}
+            <div className="flex items-center gap-3">
+              {(user.tipo_usuario === 'barbeiro' || user.tipo_usuario === 'cliente') && (
+                <div className="relative group">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 text-white flex items-center justify-center text-sm font-semibold select-none overflow-hidden ring-2 ring-amber-400/20 group-hover:ring-amber-400/50 transition-all cursor-pointer">
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt={user.nome} className="h-full w-full object-cover" />
+                    ) : (
+                      (user.nome || 'U')
+                        .split(' ')
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((p) => p[0]?.toUpperCase())
+                        .join('')
                     )}
                   </div>
                   <button
-                    onClick={handleLogout}
-                    className="relative inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 overflow-hidden group"
+                    onClick={openUserFilePicker}
+                    disabled={uploadingUserAvatar}
+                    className="absolute -bottom-1 -right-1 w-6 h-6 bg-gray-900 rounded-full flex items-center justify-center border-2 border-gray-800 hover:bg-gray-800 transition-colors"
+                    title="Alterar foto"
                   >
-                    <span className="relative z-10">Sair</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                    <svg className="w-3 h-3 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
                   </button>
+                  <input
+                    ref={fileInputUserRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleUserAvatarSelected}
+                  />
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
+              )}
 
-
-        <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl mb-6 border border-gray-600">
-          <div className="px-4 py-5 sm:p-6">
-            <h2 className="text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 mb-4">
-              Informações do Usuário
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <dt className="text-sm font-medium text-gray-300">Nome</dt>
-                <dd className="mt-1 text-sm text-gray-200">{user.nome}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-300">Email</dt>
-                <dd className="mt-1 text-sm text-gray-200">{user.email}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-300">Tipo de Usuário</dt>
-                <dd className="mt-1">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    user.tipo_usuario === 'proprietario' 
-                      ? 'bg-green-100 text-green-800' 
-                      : user.tipo_usuario === 'barbeiro'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-purple-100 text-purple-800'
-                  }`}>
-                    {user.tipo_usuario}
-                  </span>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-300">ID do Usuário</dt>
-                <dd className="mt-1 text-sm text-gray-200">{user.id_usuario}</dd>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {user.tipo_usuario === 'proprietario' && (
-          <div className="bg-gradient-to-br from-green-900/5 to-green-800/5 border border-green-700/20 rounded-lg p-4 mb-6 text-white">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-green-300">
-                  Barbearia cadastrada com sucesso!
-                </h3>
-                <div className="mt-2 text-sm text-green-200">
-                  <p>
-                    Sua barbearia foi registrada no sistema. Agora você pode começar a gerenciar 
-                    seus serviços, barbeiros e agendamentos.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Onboarding banner: shows when owner has missing setup items */}
-        {user.tipo_usuario === 'proprietario' && showOnboardingBanner && (onboarding.missingHours || onboarding.missingBarbers || onboarding.missingServices) && (
-          <div className="bg-gradient-to-br from-yellow-900/5 to-amber-900/5 border border-yellow-800/20 rounded-lg p-4 mb-6 text-white">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <svg className="h-6 w-6 text-amber-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path d="M8.257 3.099c.366-.446.957-.717 1.574-.717s1.208.271 1.574.717l5.516 6.716c.467.57.38 1.435-.187 1.925a1.25 1.25 0 01-1.68-.172L11 9.08V15a1 1 0 11-2 0V9.08L3.007 11.83a1.25 1.25 0 01-1.68.172c-.567-.49-.654-1.355-.187-1.925L8.257 3.1z" />
-                </svg>
-                <div>
-                  <h3 className="text-sm font-medium text-amber-300">Completar configuração da sua barbearia</h3>
-                  <p className="mt-1 text-sm text-amber-200">
-                    Parece que faltam algumas etapas para deixar sua barbearia pronta: {' '}
-                    {onboarding.missingHours ? 'horários ' : ''}
-                    {onboarding.missingBarbers ? (onboarding.missingHours ? '• barbeiros ' : 'barbeiros ') : ''}
-                    {onboarding.missingServices ? ((onboarding.missingHours || onboarding.missingBarbers) ? '• serviços' : 'serviços') : ''}
-                    .
-                  </p>
-                    <div className="mt-3 flex gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        // navigate to schedule editor for current shop
-                        let id = onboarding?.barbershopId as number | undefined | null;
-                        if (!id) {
-                          try {
-                            const mine = await barbershopService.listMine();
-                            if (mine && mine[0]) id = mine[0].id_barbearia;
-                          } catch {
-                            try {
-                              const all = await barbershopService.list();
-                              if (all && all[0]) id = all[0].id_barbearia;
-                            } catch {}
-                          }
-                        }
-                        if (id) navigate(`/barbearias/${id}/config`);
-                        else alert('Nenhuma barbearia encontrada para configurar horário.');
-                      }}
-                      className="relative inline-flex items-center px-3 py-1.5 bg-amber-600 text-white rounded-md text-sm font-medium hover:bg-amber-700 overflow-hidden group"
-                    >
-                        <span className="relative z-10 flex items-center gap-2">
-                          Definir horários
-                        </span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        // navigate to register barber page for current shop
-                        let id = onboarding?.barbershopId as number | undefined | null;
-                        if (!id) {
-                          try {
-                            const mine = await barbershopService.listMine();
-                            if (mine && mine[0]) id = mine[0].id_barbearia;
-                          } catch {
-                            try {
-                              const all = await barbershopService.list();
-                              if (all && all[0]) id = all[0].id_barbearia;
-                            } catch {}
-                          }
-                        }
-                        if (id) navigate(`/barbearias/${id}/register-barber`);
-                        else alert('Nenhuma barbearia encontrada para cadastrar barbeiro.');
-                      }}
-                      className="relative inline-flex items-center px-3 py-1.5 bg-gray-800 text-amber-300 border border-amber-400/20 rounded-md text-sm font-medium hover:bg-amber-500/10 overflow-hidden group"
-                    >
-                        <span className="relative z-10 flex items-center gap-2">Cadastrar barbeiros</span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/8 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                    </button>
-                    
-
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        // navigate to register service page for current shop
-                        let id = onboarding?.barbershopId as number | undefined | null;
-                        if (!id) {
-                          try {
-                            const mine = await barbershopService.listMine();
-                            if (mine && mine[0]) id = mine[0].id_barbearia;
-                          } catch {
-                            try {
-                              const all = await barbershopService.list();
-                              if (all && all[0]) id = all[0].id_barbearia;
-                            } catch {}
-                          }
-                        }
-                        if (id) navigate(`/barbearias/${id}/register-service`);
-                        else alert('Nenhuma barbearia encontrada para cadastrar serviço.');
-                      }}
-                      className="relative inline-flex items-center px-3 py-1.5 bg-gray-800 text-amber-300 border border-amber-400/20 rounded-md text-sm font-medium hover:bg-amber-500/10 overflow-hidden group"
-                    >
-                        <span className="relative z-10 flex items-center gap-2">Cadastrar serviços</span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/8 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                    </button>
-                    
-                  </div>
-                </div>
-              </div>
-              <div className="ml-4">
+              <div className="relative" ref={headerMenuRef}>
                 <button
-                  type="button"
-                  onClick={() => setShowOnboardingBanner(false)}
-                  className="inline-flex items-center p-1 rounded-md text-amber-300 hover:bg-amber-700/10"
-                  aria-label="Fechar"
+                  onClick={() => setHeaderMenuOpen((v) => !v)}
+                  className={`h-10 px-4 rounded-xl border transition-all ${
+                    headerMenuOpen 
+                      ? 'bg-amber-500/10 border-amber-500/50 text-amber-400' 
+                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-amber-500/30 hover:bg-gray-800'
+                  }`}
                 >
-                  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-                    <path strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M6 6l8 8M6 14L14 6" />
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
+
+                {headerMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-gray-800 border border-gray-700 rounded-xl shadow-xl overflow-hidden">
+                    <div className="p-2">
+                      <button
+                        onClick={() => {
+                          setHeaderMenuOpen(false);
+                          openProfileModal();
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-gray-300 hover:bg-amber-500/10 hover:text-amber-400 rounded-lg transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span className="text-sm font-medium">Meus dados</span>
+                      </button>
+
+                      {user.tipo_usuario === 'proprietario' && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setHeaderMenuOpen(false);
+                              openBarbershopModal();
+                            }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 text-gray-300 hover:bg-amber-500/10 hover:text-amber-400 rounded-lg transition-colors"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span className="text-sm font-medium">Dados da barbearia</span>
+                          </button>
+
+                          <button
+                            onClick={async () => {
+                              setHeaderMenuOpen(false);
+                              let id = selectedShopId ? Number(selectedShopId) : undefined;
+                              if (!id) {
+                                try {
+                                  let list: Barbearia[] = [];
+                                  try { list = await barbershopService.listMine(); } catch { list = await barbershopService.list(); }
+                                  if (list[0]) id = list[0].id_barbearia;
+                                } catch {}
+                              }
+                              if (id) navigate(`/barbearias/${id}/config`);
+                              else alert('Nenhuma barbearia encontrada.');
+                            }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 text-gray-300 hover:bg-amber-500/10 hover:text-amber-400 rounded-lg transition-colors"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.89 3.31.877 2.42 2.42a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.89 1.543-.877 3.31-2.42 2.42a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.89-3.31-.877-2.42-2.42a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.89-1.543.877-3.31 2.42-2.42a1.724 1.724 0 002.573-1.066z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span className="text-sm font-medium">Configurações</span>
+                          </button>
+
+                          <div className="my-2 border-t border-gray-700" />
+                        </>
+                      )}
+
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        <span className="text-sm font-medium">Sair</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
+        </div>
+      </header>
+
+      {/* Main content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome section */}
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-white mb-2">
+            Olá, {user.nome?.split(' ')[0] || 'Usuário'}! 👋
+          </h2>
+          <p className="text-gray-400">
+            {user.tipo_usuario === 'proprietario' && 'Gerencie sua barbearia com facilidade'}
+            {user.tipo_usuario === 'barbeiro' && 'Veja seus agendamentos e clientes'}
+            {user.tipo_usuario === 'cliente' && 'Reserve seu próximo corte agora'}
+          </p>
+        </div>
+
+        {/* Onboarding Banner */}
+        {user.tipo_usuario === 'proprietario' && showOnboardingBanner && (onboarding.missingHours || onboarding.missingBarbers || onboarding.missingServices) && (
+          <div className="mb-8 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-500/30 rounded-2xl p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex gap-4">
+                <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-amber-300 mb-2">Complete o cadastro da sua barbearia</h3>
+                  <p className="text-sm text-gray-300 mb-4">
+                    Configure {' '}
+                    {onboarding.missingHours && 'horários de funcionamento'}
+                    {onboarding.missingBarbers && (onboarding.missingHours ? ', cadastre barbeiros' : 'barbeiros')}
+                    {onboarding.missingServices && ((onboarding.missingHours || onboarding.missingBarbers) ? ' e serviços' : 'serviços')}
+                    {' '} para começar a receber agendamentos.
+                  </p>
+                  <div className="flex gap-3 flex-wrap">
+                    {onboarding.missingHours && (
+                      <button
+                        onClick={async () => {
+                          let id = onboarding?.barbershopId as number | undefined | null;
+                          if (!id) {
+                            try {
+                              const mine = await barbershopService.listMine();
+                              if (mine && mine[0]) id = mine[0].id_barbearia;
+                            } catch {
+                              try {
+                                const all = await barbershopService.list();
+                                if (all && all[0]) id = all[0].id_barbearia;
+                              } catch {}
+                            }
+                          }
+                          if (id) navigate(`/barbearias/${id}/config`);
+                          else alert('Nenhuma barbearia encontrada.');
+                        }}
+                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-gray-900 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Definir horários
+                      </button>
+                    )}
+                    {onboarding.missingBarbers && (
+                      <button
+                        onClick={async () => {
+                          let id = onboarding?.barbershopId as number | undefined | null;
+                          if (!id) {
+                            try {
+                              const mine = await barbershopService.listMine();
+                              if (mine && mine[0]) id = mine[0].id_barbearia;
+                            } catch {
+                              try {
+                                const all = await barbershopService.list();
+                                if (all && all[0]) id = all[0].id_barbearia;
+                              } catch {}
+                            }
+                          }
+                          if (id) navigate(`/barbearias/${id}/register-barber`);
+                          else alert('Nenhuma barbearia encontrada.');
+                        }}
+                        className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-amber-400 border border-amber-500/30 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Cadastrar barbeiros
+                      </button>
+                    )}
+                    {onboarding.missingServices && (
+                      <button
+                        onClick={async () => {
+                          let id = onboarding?.barbershopId as number | undefined | null;
+                          if (!id) {
+                            try {
+                              const mine = await barbershopService.listMine();
+                              if (mine && mine[0]) id = mine[0].id_barbearia;
+                            } catch {
+                              try {
+                                const all = await barbershopService.list();
+                                if (all && all[0]) id = all[0].id_barbearia;
+                              } catch {}
+                            }
+                          }
+                          if (id) navigate(`/barbearias/${id}/register-service`);
+                          else alert('Nenhuma barbearia encontrada.');
+                        }}
+                        className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-amber-400 border border-amber-500/30 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Cadastrar serviços
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowOnboardingBanner(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+
+        {/* Action Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {user.tipo_usuario === 'proprietario' && (
             <>
-              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600">
-                <div className="p-5">
-                  <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.196-2.196M17 20H7m10 0v-2c0-5.523-4.477-10-10-10s-10 4.477-10 10v2m20 0H7m0 0H2v-2a3 3 0 015.196-2.196M7 20v-2m3-14a3 3 0 106 0 3 3 0 00-6 0v4a1 1 0 001 1h4a1 1 0 001-1v-4z" />
-                      </svg>
-                    </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
-                        </dt>
-                        <dd className="text-lg font-medium text-white">
-                          <button
-                            onClick={async () => {
-                              try {
-                                let data: Barbearia[] = [];
-                                try { data = await barbershopService.listMine(); } catch { data = await barbershopService.list(); }
-                                const first = data[0];
-                                if (first) navigate(`/barbearias/${first.id_barbearia}/register-barber`);
-                                else alert('Nenhuma barbearia encontrada.');
-                              } catch (err) {
-                                alert('Erro ao localizar barbearia.');
-                              }
-                            }}
-                            className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
-                          >
-                            <span className="relative z-10">Cadastrar Barbeiro</span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                          </button>
-                        </dd>
-                      </dl>
-                    </div>
+              {/* Card: Cadastrar Barbeiro */}
+              <button
+                onClick={async () => {
+                  try {
+                    let data: Barbearia[] = [];
+                    try { data = await barbershopService.listMine(); } catch { data = await barbershopService.list(); }
+                    const first = data[0];
+                    if (first) navigate(`/barbearias/${first.id_barbearia}/register-barber`);
+                    else alert('Nenhuma barbearia encontrada.');
+                  } catch (err) {
+                    alert('Erro ao localizar barbearia.');
+                  }
+                }}
+                className="group relative bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 border border-gray-700 hover:border-amber-500/50 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/10 text-left"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-all" />
+                <div className="relative">
+                  <div className="w-12 h-12 bg-gradient-to-br from-amber-400/20 to-yellow-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:from-amber-400/30 group-hover:to-yellow-500/30 transition-all">
+                    <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.196-2.196M17 20H7m10 0v-2c0-5.523-4.477-10-10-10s-10 4.477-10 10v2m20 0H7m0 0H2v-2a3 3 0 015.196-2.196M7 20v-2m3-14a3 3 0 106 0 3 3 0 00-6 0v4a1 1 0 001 1h4a1 1 0 001-1v-4z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Cadastrar Barbeiro</h3>
+                  <p className="text-sm text-gray-400">Adicione profissionais à sua equipe</p>
+                  <div className="mt-4 flex items-center text-amber-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
+                    Começar
+                    <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </div>
-              </div>
+              </button>
 
-
-              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600">
-                <div className="p-5">
-                  <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4h3a1 1 0 011 1v8a3 3 0 01-3 3H6a3 3 0 01-3-3V8a1 1 0 011-1h3z" />
-                      </svg>
-                    </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        {/* título removido conforme solicitação */}
-                        <dt className="text-sm font-medium text-gray-500 truncate hidden" />
-                        <dd className="text-lg font-medium text-white">
-                          <button
-                            onClick={async () => {
-                              try {
-                                let data: Barbearia[] = [];
-                                try { data = await barbershopService.listMine(); } catch { data = await barbershopService.list(); }
-                                const first = data[0];
-                                if (first) navigate(`/barbearias/${first.id_barbearia}/register-service`);
-                                else alert('Nenhuma barbearia encontrada.');
-                              } catch (err) {
-                                alert('Erro ao localizar barbearia.');
-                              }
-                            }}
-                            className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
-                          >
-                            <span className="relative z-10">Cadastrar Serviço</span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                          </button>
-                        </dd>
-                      </dl>
-                    </div>
+              {/* Card: Cadastrar Serviço */}
+              <button
+                onClick={async () => {
+                  try {
+                    let data: Barbearia[] = [];
+                    try { data = await barbershopService.listMine(); } catch { data = await barbershopService.list(); }
+                    const first = data[0];
+                    if (first) navigate(`/barbearias/${first.id_barbearia}/register-service`);
+                    else alert('Nenhuma barbearia encontrada.');
+                  } catch (err) {
+                    alert('Erro ao localizar barbearia.');
+                  }
+                }}
+                className="group relative bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 border border-gray-700 hover:border-amber-500/50 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/10 text-left"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-all" />
+                <div className="relative">
+                  <div className="w-12 h-12 bg-gradient-to-br from-amber-400/20 to-yellow-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:from-amber-400/30 group-hover:to-yellow-500/30 transition-all">
+                    <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Cadastrar Serviço</h3>
+                  <p className="text-sm text-gray-400">Adicione cortes e serviços</p>
+                  <div className="mt-4 flex items-center text-amber-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
+                    Começar
+                    <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </div>
-              </div>
-              
+              </button>
 
-              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600">
-                <div className="p-5">
-                  <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4h3a1 1 0 011 1v8a3 3 0 01-3 3H6a3 3 0 01-3-3V8a1 1 0 011-1h3z" />
-                      </svg>
-                    </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
-                        </dt>
-                        <dd className="text-lg font-medium text-white">
-                          <button
-                            onClick={async () => {
-                              try {
-                                let data: Barbearia[] = [];
-                                try { data = await barbershopService.listMine(); } catch { data = await barbershopService.list(); }
-                                const first = data[0];
-                                if (first) navigate(`/barbearias/${first.id_barbearia}/bookings`);
-                                else alert('Nenhuma barbearia encontrada.');
-                              } catch (err) {
-                                alert('Erro ao localizar barbearia.');
-                              }
-                            }}
-                            className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
-                          >
-                            <span className="relative z-10">Ver Agendamentos</span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                          </button>
-                        </dd>
-                      </dl>
-                    </div>
+              {/* Card: Ver Agendamentos */}
+              <button
+                onClick={async () => {
+                  try {
+                    let data: Barbearia[] = [];
+                    try { data = await barbershopService.listMine(); } catch { data = await barbershopService.list(); }
+                    const first = data[0];
+                    if (first) navigate(`/barbearias/${first.id_barbearia}/bookings`);
+                    else alert('Nenhuma barbearia encontrada.');
+                  } catch (err) {
+                    alert('Erro ao localizar barbearia.');
+                  }
+                }}
+                className="group relative bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 border border-gray-700 hover:border-amber-500/50 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/10 text-left"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-all" />
+                <div className="relative">
+                  <div className="w-12 h-12 bg-gradient-to-br from-amber-400/20 to-yellow-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:from-amber-400/30 group-hover:to-yellow-500/30 transition-all">
+                    <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Ver Agendamentos</h3>
+                  <p className="text-sm text-gray-400">Gerencie os horários marcados</p>
+                  <div className="mt-4 flex items-center text-amber-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
+                    Acessar
+                    <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </div>
-              </div>
+              </button>
 
-              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600 lg:col-span-3" >
-                <div className="p-5">
-                  <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4h3a1 1 0 011 1v8a3 3 0 01-3 3H6a3 3 0 01-3-3V8a1 1 0 011-1h3z" />
-                      </svg>
+              {/* Card: Relatórios - Destaque especial */}
+              <button
+                onClick={async () => {
+                  try {
+                    let data: Barbearia[] = [];
+                    try { data = await barbershopService.listMine(); } 
+                    catch { data = await barbershopService.list(); }
+                    const first = data[0];
+                    if (!first) return alert('Nenhuma barbearia encontrada.');
+                    navigate('/reports');
+                  } catch (err) {
+                    alert('Erro ao localizar barbearia.');
+                  }
+                }}
+                className="group relative bg-gradient-to-br from-amber-500/10 to-yellow-500/10 rounded-2xl p-6 border-2 border-amber-500/30 hover:border-amber-500/60 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/20 text-left md:col-span-2 lg:col-span-3"
+              >
+                <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all" />
+                <div className="relative flex items-center gap-6">
+                  <div className="w-16 h-16 bg-gradient-to-br from-amber-400/30 to-yellow-500/30 rounded-2xl flex items-center justify-center group-hover:from-amber-400/40 group-hover:to-yellow-500/40 transition-all flex-shrink-0">
+                    <svg className="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-bold text-white">Verificar Relatórios</h3>
+                      <span className="px-3 py-1 bg-amber-400/20 text-amber-300 text-xs font-semibold rounded-full border border-amber-400/30">
+                        Insights
+                      </span>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
-                        </dt>
-                        <dd className="text-lg font-medium text-white">
-                          <button
-                            onClick={async () => {
-                              try {
-                                let data: Barbearia[] = [];
-                                try { data = await barbershopService.listMine(); } 
-                                catch { data = await barbershopService.list(); }
-
-                                const first = data[0];
-                                if (!first) return alert('Nenhuma barbearia encontrada.');
-
-                                navigate('/reports'); // <-- aqui você decide o destino
-                              } catch (err) {
-                                alert('Erro ao localizar barbearia.');
-                              }
-                            }}
-
-                            className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
-                          >
-                            <span className="relative z-10">Verificar Relatórios</span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                          </button>
-                        </dd>
-                      </dl>
-                    </div>
+                    <p className="text-gray-300">Visualize métricas, faturamento e desempenho da sua barbearia</p>
+                  </div>
+                  <div className="flex items-center text-amber-400 text-lg font-medium group-hover:translate-x-2 transition-transform">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </div>
-              </div>
+              </button>
             </>
           )}
 
           {user.tipo_usuario === 'barbeiro' && (
             <>
-              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600">
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dd className="text-lg font-medium text-white">
-                          <button
-                            onClick={async () => {
-                              // Try to resolve the logged user's barber id across known barbearias
-                              try {
-                                let shops: Barbearia[] = [];
-                                try { shops = await barbershopService.listMine(); } catch { shops = await barbershopService.list(); }
-                                for (const s of shops) {
-                                  try {
-                                    const list = await barberService.listByBarbershop(s.id_barbearia, { onlyActive: false });
-                                    const me = (list || []).find((b: any) => Number(b?.id_usuario) === Number(user.id_usuario));
-                                    if (me && me.id_barbeiro) {
-                                      const id = me.id_barbeiro;
-                                      navigate(`/barbeiros/${Number(id)}/bookings`);
-                                      return;
-                                    }
-                                  } catch {
-                                    // ignore and try next shop
-                                  }
-                                }
-                              } catch {
-                                // fallthrough to fallback
-                              }
-                              // Fallback: navigate to the first barbearia bookings page (remove old slide-over)
-                              try {
-                                let shops: Barbearia[] = [];
-                                try { shops = await barbershopService.listMine(); } catch { shops = await barbershopService.list(); }
-                                const first = shops[0];
-                                if (first) navigate(`/barbearias/${first.id_barbearia}/bookings`);
-                                else alert('Nenhuma barbearia encontrada.');
-                              } catch (err) {
-                                alert('Erro ao localizar barbearia.');
-                              }
-                            }}
-                            className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
-                          >
-                            <span className="relative z-10">Agendamentos do Barbeiro</span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                          </button>
-                        </dd>
-                      </dl>
-                    </div>
+              <button
+                onClick={async () => {
+                  try {
+                    let shops: Barbearia[] = [];
+                    try { shops = await barbershopService.listMine(); } catch { shops = await barbershopService.list(); }
+                    for (const s of shops) {
+                      try {
+                        const list = await barberService.listByBarbershop(s.id_barbearia, { onlyActive: false });
+                        const me = (list || []).find((b: any) => Number(b?.id_usuario) === Number(user.id_usuario));
+                        if (me && me.id_barbeiro) {
+                          const id = me.id_barbeiro;
+                          navigate(`/barbeiros/${Number(id)}/bookings`);
+                          return;
+                        }
+                      } catch {
+                        // ignore and try next shop
+                      }
+                    }
+                  } catch {
+                    // fallthrough to fallback
+                  }
+                  // Fallback: navigate to the first barbearia bookings page (remove old slide-over)
+                  try {
+                    let shops: Barbearia[] = [];
+                    try { shops = await barbershopService.listMine(); } catch { shops = await barbershopService.list(); }
+                    const first = shops[0];
+                    if (first) navigate(`/barbearias/${first.id_barbearia}/bookings`);
+                    else alert('Nenhuma barbearia encontrada.');
+                  } catch (err) {
+                    alert('Erro ao localizar barbearia.');
+                  }
+                }}
+                className="group relative bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 border border-gray-700 hover:border-amber-500/50 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/10 text-left w-full"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-all" />
+                <div className="relative z-10 flex items-center gap-4 mb-3">
+                  <div className="p-3 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-xl shadow-lg">
+                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                   </div>
                 </div>
-              </div>
+                <h3 className="relative z-10 text-xl font-bold text-white mb-2">Meus Agendamentos</h3>
+                <p className="relative z-10 text-gray-400 text-sm mb-4">Visualize e gerencie seus atendimentos</p>
+                <div className="relative z-10 flex items-center text-amber-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
+                  Ver agendamentos
+                  <svg className="ml-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
             </>
           )}
 
@@ -1856,28 +1782,14 @@ const Dashboard: React.FC = () => {
             </>
           )}
         </div>
+      </main>
 
+      {/* Toasts */}
+      {toasts.map((toast) => (
+        <Toast key={toast.id} {...toast} onClose={removeToast} />
+      ))}
 
-        <div className="bg-gradient-to-br from-blue-900/5 to-blue-800/5 border border-blue-700/20 rounded-lg p-4 text-white">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-amber-300" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-blue-300">
-                Funcionalidades em desenvolvimento
-              </h3>
-              <div className="mt-2 text-sm text-blue-200">
-                <p>
-                  Estamos trabalhando para trazer mais funcionalidades para o Hasty Barber. 
-                  Em breve você terá acesso a agendamentos, gerenciamento de serviços e muito mais!
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Modals */}
 
         {/* Booking slide-over */}
         {showBooking && (
@@ -2343,13 +2255,13 @@ const Dashboard: React.FC = () => {
 
                       return (
                         <>
-                        {items.map((b) => (
-                        <li key={b.id} className="py-3">
-                          <div className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1 space-y-1">
-                                {/* Status badge - primeiro elemento */}
-                                {myBookingsTab === 'historico' && (
+                          {items.map((b) => (
+                            <li key={b.id} className="py-3">
+                              <div className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex-1 space-y-1">
+                                    {/* Status badge - primeiro elemento */}
+                                    {myBookingsTab === 'historico' && (
                                   <div className="mb-2">
                                     <span className={`inline-flex items-center gap-1 text-xs rounded-full px-2 py-0.5 capitalize font-medium ${
                                       b.status === 'cancelado' ? 'bg-red-100 text-red-800 border border-red-200' : 
@@ -2401,7 +2313,7 @@ const Dashboard: React.FC = () => {
                                 {(() => {
                                   const name = getBookingBarbershopName(b);
                                   const phone = b.barbearia?.telefone_contato;
-                                    return name ? (
+                                  return name ? (
                                     <div className="text-sm text-gray-600 flex items-center gap-2">
                                       <svg className="h-4 w-4 text-amber-300" viewBox="0 0 20 20" fill="currentColor"><path d="M3 7a2 2 0 012-2h10a2 2 0 012 2v8a3 3 0 01-3 3H6a3 3 0 01-3-3V7zM6 3a1 1 0 000 2h8a1 1 0 100-2H6z"/></svg>
                                       <span>Barbearia: {name}{phone ? ` • ${phone}` : ''}</span>
@@ -3305,7 +3217,6 @@ const Dashboard: React.FC = () => {
             </aside>
           </div>
         )}
-      </div>
 
       {/* Toast Notifications */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
