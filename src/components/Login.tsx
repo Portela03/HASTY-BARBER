@@ -233,14 +233,6 @@ const Login: React.FC = () => {
 
                 <div className="flex gap-3 pt-2">
                   <button
-                    type="button"
-                    onClick={() => navigate(-1)}
-                    className="flex-1 bg-gray-800 text-gray-300 py-3.5 rounded-xl font-semibold border border-gray-700 hover:bg-gray-750 hover:border-gray-600 transition-all duration-200"
-                  >
-                    Cancelar
-                  </button>
-
-                  <button
                     type="submit"
                     disabled={isLoading}
                     className={`relative flex-1 py-3.5 rounded-xl font-bold text-gray-900 overflow-hidden shadow-lg shadow-amber-500/20 ${
