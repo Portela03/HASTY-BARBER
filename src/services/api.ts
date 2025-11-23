@@ -134,6 +134,25 @@ export const authService = {
     const response = await api.get<ValidateTokenResponse>('/api/auth/validate');
     return response.data;
   },
+
+  forgotPassword: async (email: string): Promise<void> => {
+    await api.post('/api/auth/forgot-password', { email });
+  },
+
+  validateResetToken: async (token: string): Promise<boolean> => {
+    try {
+      const response = await api.get('/api/auth/validate-reset-token', {
+        params: { token },
+      });
+      return response.data.valid;
+    } catch {
+      return false;
+    }
+  },
+
+  resetPassword: async (token: string, novaSenha: string): Promise<void> => {
+    await api.post('/api/auth/reset-password', { token, novaSenha });
+  },
 };
 
 export const registerService = {

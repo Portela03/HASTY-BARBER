@@ -8,6 +8,8 @@ import RegisterBarber from './components/RegisterBarber';
 import RegisterService from './components/RegisterService';
 import BarbershopBookings from './components/BarbershopBookings';
 import BarberBookings from './components/BarberBookings';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 
 import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
@@ -37,6 +39,14 @@ const AppRouter: React.FC = () => {
           <Route 
             path="/login" 
             element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} 
+          />
+          <Route 
+            path="/forgot-password" 
+            element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <ForgotPassword />} 
+          />
+          <Route 
+            path="/reset-password" 
+            element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <ResetPassword />} 
           />
           <Route 
             path="/register/client" 

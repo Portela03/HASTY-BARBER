@@ -222,6 +222,15 @@ const Login: React.FC = () => {
                   </div>
                 )}
 
+                <div className="text-right">
+                  <a 
+                    href="/forgot-password" 
+                    className="text-sm font-semibold text-amber-400 hover:text-amber-300 transition-colors"
+                  >
+                    Esqueceu a senha?
+                  </a>
+                </div>
+
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
