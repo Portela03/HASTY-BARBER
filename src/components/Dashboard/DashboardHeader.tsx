@@ -3,8 +3,6 @@ import type { User } from '../../types';
 
 interface DashboardHeaderProps {
   user: User;
-  uploadingAvatar: boolean;
-  onAvatarClick: () => void;
   onProfileClick: () => void;
   onBarbershopClick: () => void;
   onLogout: () => void;
@@ -15,8 +13,6 @@ interface DashboardHeaderProps {
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   user,
-  uploadingAvatar,
-  onAvatarClick,
   onProfileClick,
   onBarbershopClick,
   onLogout,
@@ -48,11 +44,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 className="flex items-center gap-3 px-4 py-2 rounded-xl bg-gray-800/50 hover:bg-gray-800 transition-all border border-gray-700/50 hover:border-amber-500/50"
               >
                 <div className="relative">
-                  {uploadingAvatar && (
-                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-amber-500"></div>
-                    </div>
-                  )}
                   <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-white font-medium overflow-hidden">
                     {user.avatar_url ? (
                       <img src={user.avatar_url} alt={user.nome} className="h-full w-full object-cover" />
@@ -83,18 +74,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 
               {menuOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-gray-800 rounded-xl shadow-xl border border-gray-700 py-2 z-50">
-                  <button
-                    onClick={() => {
-                      onAvatarClick();
-                      setMenuOpen(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white flex items-center gap-3"
-                  >
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Alterar Foto
-                  </button>
                   <button
                     onClick={() => {
                       onProfileClick();

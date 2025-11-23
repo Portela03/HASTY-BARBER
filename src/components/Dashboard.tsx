@@ -44,9 +44,7 @@ const Dashboard: React.FC = () => {
   
   // Header
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
-  const [uploadingUserAvatar] = useState(false);
   const headerMenuRef = useRef<HTMLDivElement | null>(null);
-  const fileInputUserRef = useRef<HTMLInputElement | null>(null);
 
   // Hooks customizados
   const profileHook = useProfile({
@@ -74,7 +72,6 @@ const Dashboard: React.FC = () => {
     navigate('/login');
   };
 
-  const openUserFilePicker = () => fileInputUserRef.current?.click();
   const openProfileModal = () => profileHook.openProfileModal();
   const openBarbershopModal = () => barbershopHook.openBarbershopModal();
 
@@ -158,8 +155,6 @@ const Dashboard: React.FC = () => {
       {/* Header */}
       <DashboardHeader
         user={user}
-        uploadingAvatar={uploadingUserAvatar}
-        onAvatarClick={openUserFilePicker}
         onProfileClick={openProfileModal}
         onBarbershopClick={openBarbershopModal}
         onLogout={handleLogout}
@@ -421,15 +416,6 @@ const Dashboard: React.FC = () => {
           )}
         </div>
       </main>
-
-      {/* Input oculto para upload de avatar */}
-      <input
-        ref={fileInputUserRef}
-        type="file"
-        accept="image/*"
-        onChange={() => console.log('Upload avatar')}
-        className="hidden"
-      />
 
       {/* Toasts */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
