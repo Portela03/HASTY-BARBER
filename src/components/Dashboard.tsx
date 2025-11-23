@@ -1508,6 +1508,7 @@ const Dashboard: React.FC = () => {
                         <span className="relative z-10 flex items-center gap-2">Cadastrar barbeiros</span>
                         <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/8 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     </button>
+                    
 
                     <button
                       type="button"
@@ -1533,6 +1534,7 @@ const Dashboard: React.FC = () => {
                         <span className="relative z-10 flex items-center gap-2">Cadastrar serviços</span>
                         <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/8 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     </button>
+                    
                   </div>
                 </div>
               </div>
@@ -1628,6 +1630,7 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
               </div>
+              
 
               <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600">
                 <div className="p-5">
@@ -1657,6 +1660,47 @@ const Dashboard: React.FC = () => {
                             className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
                           >
                             <span className="relative z-10">Ver Agendamentos</span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                          </button>
+                        </dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-gray-700 via-gray-700 to-gray-800 overflow-hidden shadow rounded-2xl border border-gray-600 lg:col-span-3" >
+                <div className="p-5">
+                  <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                      <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4h3a1 1 0 011 1v8a3 3 0 01-3 3H6a3 3 0 01-3-3V8a1 1 0 011-1h3z" />
+                      </svg>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-gray-500 truncate">
+                        </dt>
+                        <dd className="text-lg font-medium text-white">
+                          <button
+                            onClick={async () => {
+                              try {
+                                let data: Barbearia[] = [];
+                                try { data = await barbershopService.listMine(); } 
+                                catch { data = await barbershopService.list(); }
+
+                                const first = data[0];
+                                if (!first) return alert('Nenhuma barbearia encontrada.');
+
+                                navigate('/reports'); // <-- aqui você decide o destino
+                              } catch (err) {
+                                alert('Erro ao localizar barbearia.');
+                              }
+                            }}
+
+                            className="relative inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 overflow-hidden group"
+                          >
+                            <span className="relative z-10">Verificar Relatórios</span>
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                           </button>
                         </dd>
