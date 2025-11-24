@@ -20,7 +20,7 @@ const RegisterClient: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Format phone visually while storing raw string in state
+    
     if (name === 'telefone') {
       setFormData((prev: RegisterClientData) => ({ ...prev, telefone: formatPhoneBR(value) }));
     } else {
@@ -49,7 +49,7 @@ const RegisterClient: React.FC = () => {
       return;
     }
 
-    // Phone validation (BR): require 10 or 11 digits
+    
     if (!isValidPhoneBR(formData.telefone)) {
       setError('Informe um telefone válido com DDD (10 ou 11 dígitos).');
       setIsLoading(false);
@@ -57,7 +57,6 @@ const RegisterClient: React.FC = () => {
     }
 
     try {
-  // normalize telefone to digits-only for the API
   const payload = { ...formData, telefone: normalizePhoneToDigits(formData.telefone) } as RegisterClientData;
   const response = await registerService.registerClient(payload);
       setSuccess(response.message || 'Cliente cadastrado com sucesso!');

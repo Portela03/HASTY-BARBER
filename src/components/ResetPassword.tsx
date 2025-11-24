@@ -61,7 +61,6 @@ const ResetPassword: React.FC = () => {
 
     try {
       await authService.resetPassword(token, novaSenha);
-      // Redirecionar para login com mensagem de sucesso
       navigate('/login', { state: { message: 'Senha alterada com sucesso! Faça login com sua nova senha.' } });
     } catch (err: unknown) {
       const errorMessage =

@@ -8,7 +8,7 @@ import Toast from './Toast';
 import type { Barbearia } from '../types';
 import { barbershopService, barberService, getBarbeariaConfig, serviceService } from '../services/api';
 
-// Componentes refatorados
+
 import { DashboardHeader } from './Dashboard/DashboardHeader';
 import { DashboardCard } from './Dashboard/DashboardCard';
 
@@ -17,7 +17,7 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { toasts, removeToast, success, error: showError, warning } = useToast();
 
-  // Estados básicos
+  
   const [barbershops, setBarbershops] = useState<Barbearia[]>([]);
   const [selectedShopId, setSelectedShopId] = useState<number | ''>('');
   const [onboarding, setOnboarding] = useState({
@@ -27,11 +27,11 @@ const Dashboard: React.FC = () => {
     barbershopId: null as number | null,
   });
   
-  // Header
+  
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const headerMenuRef = useRef<HTMLDivElement | null>(null);
 
-  // Hooks customizados
+  
   const profileHook = useProfile({
     user,
     token,
@@ -51,7 +51,7 @@ const Dashboard: React.FC = () => {
     onWarning: warning,
   });
 
-  // Handlers
+  
   const handleLogout = async () => {
     await logout();
     navigate('/login');
@@ -60,7 +60,7 @@ const Dashboard: React.FC = () => {
   const openProfileModal = () => profileHook.openProfileModal();
   const openBarbershopModal = () => barbershopHook.openBarbershopModal();
 
-  // Onboarding check
+  
   useEffect(() => {
     let mounted = true;
     const runOnboardingCheck = async () => {
@@ -97,14 +97,14 @@ const Dashboard: React.FC = () => {
           setOnboarding({ missingHours, missingBarbers, missingServices, barbershopId: shopId });
         }
       } catch {
-        // ignore onboarding check errors
+        
       }
     };
     runOnboardingCheck();
     return () => { mounted = false; };
   }, [user]);
 
-  // Carregar barbearias
+  
   useEffect(() => {
     const loadShops = async () => {
       if (!user) return;
@@ -332,7 +332,7 @@ const Dashboard: React.FC = () => {
                       // ignore and try next shop
                     }
                   }
-                  // Fallback
+                  
                   const first = shops[0];
                   if (first) navigate(`/barbearias/${first.id_barbearia}/bookings`);
                   else alert('Nenhuma barbearia encontrada.');

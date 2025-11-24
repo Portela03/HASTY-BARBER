@@ -9,12 +9,12 @@ const AppointmentHistory: React.FC = () => {
   const navigate = useNavigate();
   const { toasts, removeToast, success: showSuccess, error: showError } = useToast();
   
-  // States
+  
   const [bookings, setBookings] = useState<BookingResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'completed' | 'cancelled'>('all');
   
-  // Review modal
+  
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewBookingId, setReviewBookingId] = useState<number | null>(null);
   const [reviewRating, setReviewRating] = useState<number>(0);

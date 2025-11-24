@@ -21,7 +21,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const response = await authService.validateToken();
       if (response.valid && response.usuario) {
-        // Normalize avatar field and rehydrate barber avatar from localStorage if missing
+        
         const raw = response.usuario as any;
         const normalized: User = {
           id_usuario: raw.id_usuario,

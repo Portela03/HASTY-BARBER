@@ -25,7 +25,6 @@ const RegisterService: React.FC = () => {
       const priceNum = preco ? Number(preco.replace(',', '.')) : undefined;
       await serviceService.create(barbershopId, { nome, preco: priceNum, descricao: descricao || undefined });
       success('Serviço cadastrado com sucesso.');
-      // Stay on page and show manage view so owner can see the new service
       setView('manage');
       await loadServices();
     } catch (err: any) {

@@ -47,7 +47,7 @@ const RegisterBarber: React.FC = () => {
     if (!emailRegex.test(email)) return warning('Informe um email válido.');
     setIsSubmitting(true);
     try {
-      // Validate password fields (require creation of login)
+      
       if (!senha) {
         warning('Informe a senha para o barbeiro.');
         setIsSubmitting(false);
@@ -74,11 +74,9 @@ const RegisterBarber: React.FC = () => {
         telefone: normalizePhoneToDigits(telefone) || undefined,
         email: email || undefined,
         senha,
-        // Keep legacy 'especialidades' as names for compatibility
         especialidades: (selectedServices && selectedServices.length > 0)
           ? selectedServicesDetails.map((s: any) => s.nome).filter(Boolean).join(', ')
           : (especialidades || undefined),
-        // New: include selected services as structured data (ids, names, prices)
         selected_services: selectedServicesDetails.length > 0 ? selectedServicesDetails : undefined,
         id_barbearia: barbershopId || undefined,
       };
@@ -86,7 +84,6 @@ const RegisterBarber: React.FC = () => {
       await barberService.create(payload);
 
       success('Barbeiro cadastrado com sucesso.');
-      // Instead of navigating away, switch to the manage view and reload list
       setView('manage');
       await loadBarbers();
     } catch (err: any) {
@@ -124,7 +121,7 @@ const RegisterBarber: React.FC = () => {
     try {
       const idUser = b.id_barbeiro ?? b.id_usuario ?? b.id ?? null;
       if (!idUser) return;
-      // Normalize current active state (backend may use boolean, 0/1 or strings)
+      
       const currentlyActive = Boolean(
         b.ativo === true || b.ativo === 'ativo' || b.ativo === '1' || b.ativo === 1
       );

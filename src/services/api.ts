@@ -37,7 +37,7 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   
-  // Log detalhado para debug em produção
+  
   console.log(`[API REQUEST] ${config.method?.toUpperCase()} ${config.url}`, {
     baseURL: config.baseURL,
     data: config.data,
@@ -48,10 +48,10 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Basic response error normalization
+
 api.interceptors.response.use(
   (res) => {
-    // Log sucesso em produção
+    
     console.log(`[API SUCCESS] ${res.config.method?.toUpperCase()} ${res.config.url}`, {
       status: res.status,
       dataLength: JSON.stringify(res.data).length
@@ -63,7 +63,7 @@ api.interceptors.response.use(
     const backendMessage = error?.response?.data?.message || error?.response?.data?.error || error?.message;
     const noResponse = !error?.response;
     
-    // Log detalhado do erro
+    
     console.error(`[API ERROR] ${error?.config?.method?.toUpperCase()} ${error?.config?.url}`, {
       status,
       statusText: error?.response?.statusText,
@@ -74,7 +74,7 @@ api.interceptors.response.use(
       baseURL: error?.config?.baseURL
     });
     
-    // Preserve axios error shape but improve message
+    
     error.message = noResponse
       ? `Não foi possível conectar ao servidor de API em ${BASE_URL}. Verifique se o backend está em execução.`
       : status === 401
@@ -85,7 +85,7 @@ api.interceptors.response.use(
     if (status === 401 || status === 403) {
       (error as any).code = 'AUTH';
     }
-    // Preserve original response for existing handlers
+    
     const normalized = new Error(
       status === 401
         ? backendMessage || 'Sua sessão expirou. Faça login novamente.'
@@ -97,12 +97,12 @@ api.interceptors.response.use(
     normalized.code = status === 401 || status === 403 ? 'AUTH' : undefined;
     normalized.response = error?.response;
     normalized.data = error?.response?.data;
-    // Debug helper: if config PATCH fails with validation error, log request/response for easier debugging
+    
     try {
       const reqUrl: string | undefined = error?.config?.url;
       const method: string | undefined = error?.config?.method;
       if ((status === 400 || status === 422) && method === 'patch' && reqUrl && reqUrl.includes('/barbearias') && reqUrl.includes('/config')) {
-        // Try to parse request body
+  
         let reqBody: any = error?.config?.data;
         try {
           reqBody = typeof reqBody === 'string' ? JSON.parse(reqBody) : reqBody;
@@ -172,9 +172,9 @@ export const bookingService = {
     const response = await api.post<BookingResponse>('/api/bookings', data);
     return response.data;
   },
-  // Placeholder for future use
+  
   listMine: async (): Promise<BookingResponse[]> => {
-    // Aceita formatos variados do backend e normaliza para o front
+  
     const response = await api.get<any[]>('/api/bookings/me');
     const data = response.data || [];
     const mapStatus = (s: any): BookingResponse['status'] => {
@@ -183,7 +183,7 @@ export const bookingService = {
       if (v === 'confirmed') return 'confirmado';
       if (v === 'cancelled') return 'cancelado';
       if (v === 'finalized') return 'finalizado';
-      // já em PT-BR
+      
       if (v === 'pendente' || v === 'confirmado' || v === 'cancelado' || v === 'finalizado') return v as any;
       return 'pendente';
     };
@@ -259,10 +259,10 @@ export const bookingService = {
       barbearia_nome: raw.barbearia_nome ?? raw.barbearia?.nome,
     }));
   },
-  // List bookings across barbearias for a specific barber (best-effort)
+  
   listByBarber: async (id_barbeiro: number): Promise<BookingResponse[]> => {
     const results: BookingResponse[] = [];
-    // Try to get barbearias related to the user first, then fallback to all
+  
     let shops: any[] = [];
     try { const res = await api.get('/api/barbearias/me'); shops = res.data || []; } catch { /* ignore */ }
     if (!shops || shops.length === 0) {
@@ -276,12 +276,11 @@ export const bookingService = {
         // ignore individual failures
       }
     }
-    // Fallback: try a direct endpoint if backend exposes it
+    
     if (results.length === 0) {
       try {
         const resp = await api.get<any[]>(`/api/barbeiros/${id_barbeiro}/bookings`);
         const data = resp.data || [];
-        // Try to normalize via the same mapping used elsewhere (simple form)
         const mapStatus = (s: any): BookingResponse['status'] => {
           const v = String(s || '').toLowerCase();
           if (v === 'pending') return 'pendente';
@@ -343,14 +342,14 @@ export const bookingService = {
     const response = await api.patch<BookingResponse>(`/api/bookings/${id}/finalize`, {});
     return response.data;
   },
-  // Permanently remove a booking (if backend supports DELETE)
+
   remove: async (id: number): Promise<void> => {
     const response = await api.delete(`/api/bookings/${id}`);
     if (response.status !== 200 && response.status !== 204) {
       throw new Error(`HTTP ${response.status}`);
     }
   },
-  // Remove all bookings for a barbearia (if backend supports scoped DELETE)
+  
   removeAllByBarbershop: async (id_barbearia: number): Promise<void> => {
     const response = await api.delete(`/api/barbearias/${id_barbearia}/bookings`);
     if (response.status !== 200 && response.status !== 204) {
@@ -359,19 +358,19 @@ export const bookingService = {
   },
 };
 
-// Queryable list for barbearia bookings
+
 export async function listBarbeariaBookings(
   id_barbearia: number,
   q?: {
     status?: Array<'pendente' | 'confirmado' | 'cancelado' | 'finalizado'>;
-    startDate?: string; // YYYY-MM-DD
-    endDate?: string; // YYYY-MM-DD
+    startDate?: string;
+    endDate?: string;
     mine?: boolean;
     barber_id?: number;
   }
 ): Promise<BookingResponse[]> {
   const params: any = {};
-  if (q?.status) params.status = q.status; // let axios send array as repeated param
+  if (q?.status) params.status = q.status;
   if (q?.startDate) params.startDate = q.startDate;
   if (q?.endDate) params.endDate = q.endDate;
   if (typeof q?.mine === 'boolean') params.mine = q.mine;
@@ -430,17 +429,17 @@ export const barbershopService = {
     const response = await api.get<Barbearia[]>('/api/barbearias');
     return response.data;
   },
-  // Opcional: se o backend expuser somente as do usuário associado
+  
   listMine: async (): Promise<Barbearia[]> => {
     const response = await api.get<Barbearia[]>('/api/barbearias/me');
     return response.data;
   },
-  // Atualizar dados da barbearia
+  
   update: async (
     id_barbearia: number,
     data: Partial<{ nome: string; endereco: string; telefone_contato: string; horario_funcionamento: string }>
   ): Promise<Barbearia> => {
-    // Aceitar nomes alternativos de campos do backend se necessário
+    
     const payload: any = {
       nome: (data as any)?.nome ?? (data as any)?.name,
       endereco: (data as any)?.endereco ?? (data as any)?.address,
@@ -480,7 +479,7 @@ export const barberService = {
     const response = await api.post<Barbeiro>('/api/barbeiros', data);
     return response.data;
   },
-  // Opcional: ativar/desativar barbeiro
+  
   setActive: async (id_usuario: number, ativo: boolean): Promise<Barbeiro> => {
     const response = await api.patch<Barbeiro>(`/api/barbeiros/${id_usuario}/status`, { ativo });
     return response.data;
@@ -506,7 +505,7 @@ export const uploadService = {
   },
 };
 
-// User profile
+
 export const userService = {
   updateMe: async (data: Partial<{ nome: string; email: string; telefone: string }>): Promise<import('../types').User> => {
     const res = await api.patch<import('../types').User>('/api/users/me', data);
@@ -515,7 +514,7 @@ export const userService = {
 };
 
 export default api;
-// Reviews service
+
 export const evaluationService = {
   create: async (data: CreateReviewRequest): Promise<void> => {
     await api.post('/api/avaliacoes', data);
@@ -530,7 +529,7 @@ export const evaluationService = {
   },
 };
 
-// Reschedule service (reagendamento com aprovação)
+
 export const rescheduleService = {
   create: async (bookingId: number, data: CreateRescheduleRequest): Promise<RescheduleRequestItem> => {
     const res = await api.post<RescheduleRequestItem>(`/api/bookings/${bookingId}/reschedule-requests`, data);
@@ -550,7 +549,7 @@ export const rescheduleService = {
   },
 };
 
-// Services (catálogo da barbearia)
+
 export const serviceService = {
   listByBarbershop: async (id_barbearia: number): Promise<ServiceItem[]> => {
     const res = await api.get<any[]>(`/api/barbearias/${id_barbearia}/services`);
@@ -568,17 +567,16 @@ export const serviceService = {
     const res = await api.post<ServiceItem>(`/api/barbearias/${id_barbearia}/services`, data);
     return res.data;
   },
-  // Delete a service (scoped to a barbearia). Some backends may also support /api/services/:id - we prefer scoped route.
+
   delete: async (id_barbearia: number, serviceId: number): Promise<void> => {
     const res = await api.delete(`/api/barbearias/${id_barbearia}/services/${serviceId}`);
     if (res.status !== 204 && res.status !== 200) {
       throw new Error(`HTTP ${res.status}`);
     }
   },
-  // futuras ações: update/delete/activate
 };
 
-// Hidden cutoffs (persist "clear finalized" per user/context)
+
 export type HiddenScope = 'global' | 'barbearia' | 'barbeiro';
 export type HiddenCutoffItem = { scope: HiddenScope; scope_id?: number; hidden_before: string };
 
@@ -591,7 +589,7 @@ export async function listHiddenCutoffs(): Promise<HiddenCutoffItem[]> {
 export async function upsertHiddenCutoff(params: {
   scope: HiddenScope;
   scope_id?: number | null;
-  hidden_before: string; // ISO UTC
+  hidden_before: string;
 }): Promise<{ scope: HiddenScope; scope_id?: number; hidden_before: string; updated: true }>
 {
   const body: any = {
@@ -637,19 +635,18 @@ export async function clearFinalizadosBarbeiro(barbeiroId: number) {
   return upsertHiddenCutoff({ scope: 'barbeiro', scope_id: barbeiroId, hidden_before: nowUtcIso() });
 }
 
-// Barbearia Config (GET/PATCH)
+
 export async function getBarbeariaConfig(id_barbearia: number): Promise<BarbeariaConfig> {
   const res = await api.get(`/api/barbearias/${id_barbearia}/config`);
   const raw = res.data as any;
   const toHHMM = (v: any): string | null => {
     if (v == null) return null;
     const s = String(v);
-    // Accept HH:mm or HH:mm:ss and normalize to HH:mm for the UI
     const m = s.match(/^([0-1]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/);
     if (!m) return null;
     return `${m[1]}:${m[2]}`;
   };
-  // Normalize windows in days with fallback from minutes
+  
   const cancelDays: number | null =
     typeof raw?.cancel_window_days === 'number'
       ? raw.cancel_window_days
@@ -664,7 +661,6 @@ export async function getBarbeariaConfig(id_barbearia: number): Promise<Barbeari
       : null;
 
   const bhRaw: any[] = Array.isArray(raw?.business_hours) ? raw.business_hours : [];
-  // Normalize into a full 7-day array (0..6) so UI always shows all days
   const business_hours: any[] = Array.from({ length: 7 }).map((_, i) => ({ day: i, open: null, close: null }));
   bhRaw.forEach((h) => {
     let dayNorm: number;
@@ -702,10 +698,10 @@ export async function patchBarbeariaConfig(
   id_barbearia: number,
   data: Partial<BarbeariaConfig>
 ): Promise<BarbeariaConfig> {
-  // Send only supported fields: duration_minutes, business_hours, *_window_days
+  
   const payload: any = {};
   if (typeof data.duration_minutes === 'number') payload.duration_minutes = data.duration_minutes;
-  // Helper to format times as HH:mm
+  
   const toHHMM = (v: any): string | null => {
     if (v == null || v === '') return null;
     const s = String(v);
@@ -717,10 +713,9 @@ export async function patchBarbeariaConfig(
   let hadWeekendEntries = false;
   let fullBh: any[] = [];
   if (Array.isArray(data.business_hours)) {
-    // Accept several shapes from callers; prefer day_of_week/open_time/close_time with day_of_week 0..6
+    
     fullBh = (data.business_hours || [])
       .map((h: any) => {
-        // Normalize possible aliases
         const dow = (typeof h.day_of_week === 'number' ? h.day_of_week : typeof h.day === 'number' ? h.day : undefined);
         const openVal = h.open_time ?? h.open ?? null;
         const closeVal = h.close_time ?? h.close ?? null;
@@ -740,18 +735,18 @@ export async function patchBarbeariaConfig(
     payload.reschedule_window_days = data.reschedule_window_days;
   }
   try {
-  // 1. Tenta formato padrão (day_of_week 0..6, open_time/close_time)
+  
   const res = await api.patch<BarbeariaConfig>(`/api/barbearias/${id_barbearia}/config`, payload);
-    // Log response for debugging and handle empty responses
+    
     console.log('patchBarbeariaConfig: response status', res.status, 'data:', res.data);
     if (res.status === 204 || res.data == null) {
-      // Some backends return 204 No Content; fetch the canonical config
+      
       return await getBarbeariaConfig(id_barbearia);
     }
     return res.data;
   } catch (err: any) {
     const status = err?.status ?? err?.response?.status;
-    // If the server rejects and we included weekend entries, retry without weekends.
+    
   if ((status === 400 || status === 422) && Array.isArray(data.business_hours) && hadWeekendEntries) {
       try {
         const noWeekendBh = (data.business_hours || [])
@@ -774,7 +769,7 @@ export async function patchBarbeariaConfig(
         // fall through to other fallback strategies below
       }
     }
-      // 2. Tenta formato alternativo (day 0..6, open/close)
+      
     if ((status === 400 || status === 422) && Array.isArray(data.business_hours)) {
       const toHHMMSS = (v: any): string | null => {
         if (v == null || v === '') return null;
@@ -796,7 +791,6 @@ export async function patchBarbeariaConfig(
   if (res2.status === 204 || res2.data == null) return await getBarbeariaConfig(id_barbearia);
   return res2.data;
       } catch (err2: any) {
-        // 3. Tenta formato day_of_week 0..6, open_time/close_time
         const altPayload2: any = { ...payload };
         altPayload2.business_hours = data.business_hours.map((h: any) => ({
           day_of_week: typeof h.day_of_week === 'number' ? h.day_of_week : typeof h.day === 'number' ? h.day : undefined,

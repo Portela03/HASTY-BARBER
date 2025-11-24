@@ -228,9 +228,6 @@ Gerencia edição de dados da barbearia.
 **Antes (3400+ linhas):**
 ```tsx
 const Dashboard = () => {
-  // 100+ linhas de useState
-  // 500+ linhas de funções
-  // 2800+ linhas de JSX
   return <div>...</div>
 }
 ```

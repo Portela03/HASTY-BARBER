@@ -10,14 +10,14 @@ const MyAppointments: React.FC = () => {
   const navigate = useNavigate();
   const { toasts, removeToast, success, error: showError } = useToast();
   
-  // States
+  
   const [bookings, setBookings] = useState<BookingResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<number | null>(null);
   
-  // Reschedule states
+  
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleBooking, setRescheduleBooking] = useState<BookingResponse | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState('');

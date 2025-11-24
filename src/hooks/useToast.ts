@@ -19,7 +19,7 @@ export const useToast = () => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  // Funções de atalho
+  
   const success = useCallback((message: string) => showToast(message, 'success'), [showToast]);
   const error = useCallback((message: string) => showToast(message, 'error'), [showToast]);
   const warning = useCallback((message: string) => showToast(message, 'warning'), [showToast]);

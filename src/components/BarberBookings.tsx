@@ -37,7 +37,7 @@ const BarberBookings: React.FC = () => {
           setReschedules([]);
         }
       } catch (errRes: any) {
-        // non-fatal
+        
       }
     } catch (err: any) {
       error(err?.message || 'Erro ao carregar agendamentos.');
@@ -46,7 +46,7 @@ const BarberBookings: React.FC = () => {
     }
   };
 
-  // Counts for labels
+  
   const counts = {
     all: (bookings || []).filter((b) => b.status !== 'cancelado').length,
     pendente: (bookings || []).filter((b) => b.status === 'pendente').length,
@@ -56,7 +56,7 @@ const BarberBookings: React.FC = () => {
   };
 
   const filtered = bookings.filter((b) => {
-    // Only include bookings that actually belong to this barber (normalize id fields)
+    
     const bid = Number(b.barber_id ?? (b as any).barbeiro?.id_barbeiro ?? NaN);
     if (!Number.isFinite(bid) || Number(bid) !== Number(barberId)) return false;
     if (filter === 'all') return b.status !== 'cancelado';

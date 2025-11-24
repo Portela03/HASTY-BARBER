@@ -18,9 +18,9 @@ const BookingService: React.FC = () => {
   const [availableBarbers, setAvailableBarbers] = useState<Barbeiro[] | null>(null);
   const [isLoadingBarbers, setIsLoadingBarbers] = useState(false);
   const [barbersError, setBarbersError] = useState<string | null>(null);
-  // Reviews cache for barbers (id_barbeiro -> {average,total})
+  
   const [barberReviewsMap, setBarberReviewsMap] = useState<Record<number, { average: number | null; total: number }>>({});
-  // Reviews cache for barbershops (id_barbearia -> {average,total})
+  
   const [barbershopReviewsMap, setBarbershopReviewsMap] = useState<Record<number, { average: number | null; total: number }>>({});
   
   const [availableServices, setAvailableServices] = useState<ServiceItem[] | null>(null);
@@ -48,7 +48,7 @@ const BookingService: React.FC = () => {
     try {
       const data = await barbershopService.list();
       setBarbershops(data);
-      // fetch barbershop review summaries
+      
       try {
         const ids = (data || []).map((s: any) => Number(s.id_barbearia)).filter((x: number) => Number.isFinite(x) && x > 0);
         const idsToFetch = ids.filter((i: number) => !(i in barbershopReviewsMap));
@@ -81,7 +81,7 @@ const BookingService: React.FC = () => {
     try {
       const barbers = await barberService.listByBarbershop(id, { onlyActive: true });
       setAvailableBarbers(barbers || []);
-      // fetch barber review summaries for these barbers
+      
       try {
         const ids = (barbers || []).map((b: any) => Number((b as any).id_barbeiro)).filter((x) => Number.isFinite(x) && x > 0);
         const idsToFetch = ids.filter((i) => !(i in barberReviewsMap));
@@ -117,12 +117,12 @@ const BookingService: React.FC = () => {
     const newServices = isSelected
       ? booking.service.filter((s) => s !== idStr)
       : [...booking.service, idStr];
-    // reset barber selection when services change to avoid incompatible barber
+    
     setBooking({ ...booking, service: newServices, barber_id: '' });
     
     const allServices = availableServices || [];
     const selectedServices = allServices.filter((s) => newServices.includes(String(s.id)));
-    // For now, set a default duration or skip calculation if duration field doesn't exist
+    
     setBookingDurationMinutes(selectedServices.length > 0 ? selectedServices.length * 30 : null);
   };
 
@@ -165,7 +165,7 @@ const BookingService: React.FC = () => {
     console.log('[FRONTEND] Tentando criar agendamento:', payload);
     
     try {
-      // Convert selected service ids (string) to service names expected by backend
+      
       const svcNames = (availableServices || [])
         .filter((s) => booking.service.includes(String(s.id)))
         .map((s) => s.nome);
@@ -187,10 +187,10 @@ const BookingService: React.FC = () => {
       console.error('[FRONTEND] Status HTTP:', err?.response?.status);
       console.error('[FRONTEND] Payload enviado:', payload);
       
-      // Mensagens de erro mais amigáveis
+      
       let errorMessage = err?.response?.data?.message || err?.message || 'Erro ao criar agendamento.';
       
-      // Se for erro de especialidades do barbeiro, melhorar a mensagem
+      
       if (errorMessage.includes('não oferece')) {
         const barberName = availableBarbers?.find(b => b.id_barbeiro === booking.barber_id)?.nome || 'O barbeiro selecionado';
         errorMessage = `${barberName} não está disponível para realizar todos os serviços selecionados. Por favor, escolha outro barbeiro ou revise os serviços.`;
@@ -477,28 +477,27 @@ const BookingService: React.FC = () => {
                 </div>
               ) : (
                 (() => {
-                  // derive selected service names from availableServices + booking.service (ids)
+                  
                   const selectedServiceNames = (availableServices || [])
                     .filter((s) => booking.service.includes(String(s.id)))
                     .map((s) => s.nome || '')
                     .filter(Boolean);
                   
-                  // Se não há serviços selecionados ou não há barbeiros, não filtra
+                  
                   const filteredBarbers = selectedServiceNames.length === 0 || !availableBarbers || availableBarbers.length === 0
                     ? (availableBarbers || [])
                     : (availableBarbers || []).filter((b) => {
-                        // Se o barbeiro não tem especialidades definidas, inclui ele
+                        
                         if (!b.especialidades || b.especialidades.trim() === '') return true;
                         
                         const specs = new Set(
                           (b.especialidades || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)
                         );
                         
-                        // Verifica se o barbeiro tem pelo menos uma das especialidades necessárias
-                        // Em vez de exigir TODAS, verifica se tem ALGUMA correspondência parcial
+                        
                         return selectedServiceNames.some((serviceName) => {
                           const serviceNameLower = serviceName.trim().toLowerCase();
-                          // Verifica correspondência exata ou parcial
+                          
                           return Array.from(specs).some(spec => 
                             spec === serviceNameLower || 
                             spec.includes(serviceNameLower) || 

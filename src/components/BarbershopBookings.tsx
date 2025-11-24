@@ -31,7 +31,7 @@ const BarbershopBookings: React.FC = () => {
         const rs = await rescheduleService.listByBarbershop(barbershopId);
         setReschedules(rs || []);
       } catch (errRes: any) {
-        // non-fatal
+        
       }
     } catch (err: any) {
       error(err?.message || 'Erro ao carregar agendamentos.');
@@ -57,7 +57,7 @@ const BarbershopBookings: React.FC = () => {
     if (!confirm('Tem certeza que deseja limpar (marcar como ocultos) os agendamentos finalizados desta barbearia?')) return;
     setClearing(true);
     try {
-      // Use the legacy "clear finalized" logic that persists a hidden cutoff on the server
+      
       await clearFinalizadosBarbearia(barbershopId);
       success('Agendamentos finalizados limpos da visualização.');
       await loadBookings();
@@ -68,7 +68,7 @@ const BarbershopBookings: React.FC = () => {
     }
   };
 
-  // Counts per status — used in labels
+  
   const counts = {
     all: (bookings || []).filter((b) => b.status !== 'cancelado').length,
     pendente: (bookings || []).filter((b) => b.status === 'pendente').length,
@@ -77,15 +77,14 @@ const BarbershopBookings: React.FC = () => {
     cancelado: (bookings || []).filter((b) => b.status === 'cancelado').length,
   };
 
-  // Historical behavior: 'Todos' did not include canceled bookings by default.
+  
   const filtered = bookings.filter((b) => {
     if (filter === 'all') return b.status !== 'cancelado';
     return b.status === filter;
   });
 
-  // Centralized status badge renderer (aligned with MyAppointments styling)
+  
   const getStatusBadge = (status: string) => {
-    // Solid/clear color variants to match design reference
     const statusMap: Record<string, { label: string; className: string; dotClass?: string }> = {
       pendente: { label: 'Pendente', className: 'bg-amber-500 text-gray-900 border-amber-400 shadow-lg shadow-amber-400/20', dotClass: 'bg-white' },
       confirmado: { label: 'Confirmado', className: 'bg-green-600 text-white border-green-500 shadow-lg shadow-green-500/20', dotClass: 'bg-white' },

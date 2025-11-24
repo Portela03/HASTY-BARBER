@@ -3,10 +3,10 @@ export interface User {
   nome: string;
   email: string;
   tipo_usuario: string; 
-  avatar_url?: string; // URL da foto de perfil
+  avatar_url?: string;
 }
 
-// API Error Response
+
 export interface ApiErrorResponse {
   response?: {
     data?: {
@@ -171,23 +171,21 @@ export interface NotificationContextType {
 }
 
 export interface BookingForm {
-  // Selected services in the form (we derive the string payload from this)
+  
   service: string[];
   date: string;
   time: string;
-  // Selected barber id during creation flow (required in POST)
   barber_id: number | '';
   notes: string;
 }
 
-// API contracts for bookings
+
 export interface BookingRequest {
   id_barbearia: number;
-  // Accept string (legacy) or array of names (preferred)
   service: string | string[];
-  date: string; // YYYY-MM-DD
-  time: string; // HH:mm
-  barber_id: number; // required
+  date: string;
+  time: string;
+  barber_id: number;
   notes?: string;
 }
 
@@ -197,19 +195,17 @@ export interface BookingResponse {
   id: number;
   id_barbearia?: number;
   service: string;
-  // Optional detailed services array (present on create response)
-  services?: Array<{ service_id: number; name: string; price?: number | null }>; 
-  date: string; // ISO string or YYYY-MM-DD
-  time: string; // HH:mm or ISO time component
+  services?: Array<{ service_id: number; name: string; price?: number | null }>;
+  date: string;
+  time: string;
   barber_id?: number;
-  // New contract: nested barber object
   barbeiro?: {
     id_barbeiro: number;
     nome: string;
     telefone?: string;
     avatar_url?: string;
   } | null;
-  // Optional customer info when visible to barber/proprietário
+
   cliente?: {
     id_usuario?: number;
     nome?: string;
@@ -220,12 +216,12 @@ export interface BookingResponse {
   notes?: string;
   status: BookingStatus;
   createdAt?: string;
-  // Optional related data for convenience
+ 
   barbearia?: Barbearia;
   barbearia_nome?: string;
 }
 
-// Barbers (barbeiros)
+
 export interface Barbeiro {
   id_barbeiro?: number;
   id_usuario: number;
@@ -234,7 +230,7 @@ export interface Barbeiro {
   telefone?: string;
   ativo?: boolean;
   especialidades?: string;
-  avatar_url?: string; // URL da foto de perfil do barbeiro
+  avatar_url?: string;
 }
 
 export interface CreateBarberRequest {
@@ -246,14 +242,14 @@ export interface CreateBarberRequest {
   especialidades?: string;
 }
 
-// Avaliações (reviews)
+
 export type ReviewTarget = 'barbeiro' | 'barbearia';
 
 export interface CreateReviewRequest {
   id_booking: number;
   target: ReviewTarget;
-  rating: number; // 1..5
-  comentario?: string; // up to 1000 chars
+  rating: number;
+  comentario?: string;
 }
 
 export interface ReviewItem {
@@ -269,60 +265,53 @@ export interface ReviewsListResponse {
   items: ReviewItem[];
 }
 
-// Reagendamento com aprovação
+
 export type RescheduleStatus = 'pendente' | 'aprovado' | 'rejeitado';
 
 export interface CreateRescheduleRequest {
-  date: string; // YYYY-MM-DD
-  time: string; // HH:mm
+  date: string;
+  time: string;
   barber_id?: number;
 }
 
 export interface RescheduleRequestItem {
   id: number;
   booking_id: number;
-  target_date: string; // YYYY-MM-DD
-  target_time: string; // HH:mm
+  target_date: string;
+  target_time: string;
   target_barber_id?: number;
   status: RescheduleStatus;
   created_at: string;
 }
 
-// Serviços da barbearia
+
 export interface ServiceItem {
   id: number;
   id_barbearia: number;
   nome: string;
-  preco?: number | string; // apenas visual por enquanto
+  preco?: number | string;
   ativo?: boolean;
   descricao?: string;
 }
 
 export interface CreateServiceRequest {
   nome: string;
-  preco?: number | string; // apenas visual por enquanto
+  preco?: number | string;
   descricao?: string;
 }
 
-// Configurações da Barbearia
+
 export interface BusinessHour {
-  // 0 = Domingo, 1 = Segunda, ... 6 = Sábado
   day: number;
-  // Formato HH:mm ou null para fechado
   open: string | null;
   close: string | null;
 }
 
 export interface BarbeariaConfig {
-  // Duração mínima do serviço em minutos
   duration_minutes: number;
-  // Janela de cancelamento em DIAS (null = sem prazo)
   cancel_window_days: number | null;
-  // Janela de reagendamento em DIAS (null = sem prazo)
   reschedule_window_days: number | null;
-  // Legado opcional, apenas para leitura/fallback
   cancel_window_minutes?: number | null;
   reschedule_window_minutes?: number | null;
-  // Horários por dia da semana
   business_hours: BusinessHour[];
 }

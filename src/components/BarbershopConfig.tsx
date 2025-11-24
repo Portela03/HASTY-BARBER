@@ -68,7 +68,7 @@ const BarbershopConfig: React.FC = () => {
     };
   }, [barbeariaId]);
 
-  // Simple guards: only proprietario should access
+  
   useEffect(() => {
     if (user && user.tipo_usuario && user.tipo_usuario !== 'proprietario') {
       navigate('/dashboard', { replace: true });
@@ -88,7 +88,7 @@ const BarbershopConfig: React.FC = () => {
     }));
   }
 
-  // Validate form whenever it changes
+  
   useEffect(() => {
     const { general, dayErrors } = validateBusinessHoursArray(form.business_hours || []);
     const windowsErrs = validateWindowsAndDuration({
@@ -118,14 +118,14 @@ const BarbershopConfig: React.FC = () => {
 
   
 
-  // Copia o horário (open/close) do dia selecionado para os dias úteis (Seg–Sex), exceto o próprio e finais de semana
+  
   function applyToWeekdays(fromDay: number) {
     const src = form.business_hours.find((h) => h.day === fromDay);
     if (!src) return;
     setForm((prev) => ({
       ...prev,
       business_hours: prev.business_hours.map((h) => {
-        // dias úteis: 1..5; não aplicar em sábado(6) nem domingo(0) e nem no dia de origem
+        
         if (h.day >= 1 && h.day <= 5 && h.day !== fromDay) {
           return { ...h, open: src.open ?? null, close: src.close ?? null };
         }
@@ -139,7 +139,7 @@ const BarbershopConfig: React.FC = () => {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSuccess(null);
-    // Sanitize: se apenas um dos campos estiver preenchido, consideramos fechado (ambos null)
+    
     const sanitizedHours: BusinessHour[] = form.business_hours.map((h) => {
       const open = h.open ?? null;
       const close = h.close ?? null;
@@ -148,7 +148,7 @@ const BarbershopConfig: React.FC = () => {
       }
       return h;
     });
-    // Re-run validation before submit
+    
     const { general, dayErrors } = validateBusinessHoursArray(sanitizedHours);
     const windowsErrs = validateWindowsAndDuration({
       duration_minutes: form.duration_minutes,
@@ -169,8 +169,7 @@ const BarbershopConfig: React.FC = () => {
     try {
       setSaving(true);
       setError(null);
-      // Enviar apenas os campos em DIAS (mais os campos que continuam iguais)
-      // O backend espera day_of_week (0..6) e open_time/close_time em HH:MM; enviar apenas dias abertos.
+      
       const bhToSend = sanitizedHours
         .filter((h) => h.open && h.close)
         .map((h) => ({ day_of_week: h.day, open_time: h.open, close_time: h.close }));
@@ -181,7 +180,7 @@ const BarbershopConfig: React.FC = () => {
         reschedule_window_days: form.reschedule_window_days === 0 ? null : form.reschedule_window_days,
       };
       console.log('Enviando PATCH config:', JSON.stringify(payload, null, 2));
-      // Send and then reload canonical config from server to ensure persistence
+      
       await patchBarbeariaConfig(barbeariaId, payload);
       const fresh = await getBarbeariaConfig(barbeariaId);
       setForm({
@@ -192,12 +191,12 @@ const BarbershopConfig: React.FC = () => {
       } as BarbeariaConfig);
       setSuccess('Configurações salvas com sucesso.');
     } catch (e: any) {
-      // Mapear mensagens e fieldErrors do backend para erros inline quando possível
+      
       const backendData = e?.data ?? e?.response?.data;
       const backendMsg = backendData?.message || backendData?.error || e?.message;
-      // Reset dayErrors
+      
       const newDayErrors: Record<number, string | null> = {};
-      // backend pode retornar .errors = [{ path, message }] ou fieldErrors (Zod)
+      
       if (Array.isArray(backendData?.errors)) {
         for (const it of backendData.errors) {
           const path = it?.path;
@@ -205,26 +204,26 @@ const BarbershopConfig: React.FC = () => {
           if (Array.isArray(path) && path[0] === 'business_hours' && typeof path[1] === 'number') {
             newDayErrors[path[1]] = msg;
           } else if (typeof path === 'string') {
-            // tenta extrair índice com regex como business_hours[2] ou business_hours.2
+
             const m = path.match(/business_hours\W*(\d+)/);
             if (m) newDayErrors[Number(m[1])] = msg;
           }
         }
       }
-      // fieldErrors: pode ser objeto em forma de { business_hours: [null, { open_time: ['msg'] }, ... ] }
+
       if (backendData?.fieldErrors && typeof backendData.fieldErrors === 'object') {
         const fe = backendData.fieldErrors;
         if (fe.business_hours && Array.isArray(fe.business_hours)) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          
           fe.business_hours.forEach((entry: any, idx: number) => {
             if (!entry) return;
-            // entry pode ser array de mensagens ou objeto com chaves
+            
             if (typeof entry === 'string') {
               newDayErrors[idx] = entry;
             } else if (Array.isArray(entry) && entry.length > 0) {
               newDayErrors[idx] = String(entry[0]);
             } else if (typeof entry === 'object') {
-              // pega primeira mensagem encontrada
+              
               const v = Object.values(entry)[0];
               if (Array.isArray(v) && v.length > 0) newDayErrors[idx] = String(v[0]);
               else if (typeof v === 'string') newDayErrors[idx] = v;
@@ -232,7 +231,7 @@ const BarbershopConfig: React.FC = () => {
           });
         }
       }
-      // aplica os erros coletados
+      
       setFormErrors((prev) => ({ ...(prev || {}), dayErrors: { ...(prev?.dayErrors || {}), ...newDayErrors } }));
       setError(backendMsg || 'Falha ao salvar.');
     } finally {
