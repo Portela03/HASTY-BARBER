@@ -8,6 +8,29 @@ import type { Barbearia } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+// ====== Utilitários de Log/Diagnóstico ======
+const makeReqId = () => `RPT-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+const maskToken = (t?: string | null) => (t && t.length > 8 ? `${t.slice(0, 4)}...${t.slice(-4)}` : t || 'none');
+const getEnvInfo = () => ({
+  apiBase: API_BASE,
+  location: {
+    origin: window.location.origin,
+    href: window.location.href,
+    protocol: window.location.protocol,
+    isHttps: window.location.protocol === 'https:',
+  },
+  sameOrigin: (() => {
+    try { return new URL(API_BASE, window.location.href).origin === window.location.origin; } catch { return false; }
+  })(),
+  viteApiUrl: (import.meta as any).env?.VITE_API_URL ?? null,
+});
+const getDeviceInfo = () => ({
+  userAgent: navigator.userAgent,
+  platform: (navigator as any).platform,
+  language: navigator.language,
+  onLine: navigator.onLine,
+});
+
 const ReportsPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -53,7 +76,9 @@ const ReportsPage: React.FC = () => {
       return;
     }
 
+    const reqId = makeReqId();
     setDownloadingReport(type);
+
     try {
       let endpoint = '';
       switch (type) {
@@ -68,32 +93,102 @@ const ReportsPage: React.FC = () => {
           break;
       }
 
-      const response = await fetch(`${API_BASE}${endpoint}`, {
+      const token = localStorage.getItem('token');
+      const url = `${API_BASE}${endpoint}`;
+      const options: RequestInit = {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
+      };
+
+      // Logs antes da chamada
+      console.groupCollapsed(`[Reports] Download ${type} (${reqId})`);
+      console.log('Request:', {
+        reqId,
+        url,
+        method: options.method,
+        headers: { ...options.headers, Authorization: maskToken(token) },
+        env: getEnvInfo(),
+        device: getDeviceInfo(),
+        endpoint,
+      });
+
+      const start = performance.now();
+      const response = await fetch(url, options);
+      const durationMs = Math.round(performance.now() - start);
+
+      // Logs de resposta
+      const contentType = response.headers.get('content-type') || 'unknown';
+      const contentLength = response.headers.get('content-length') || 'unknown';
+      console.log('Response meta:', {
+        status: response.status,
+        statusText: response.statusText,
+        durationMs,
+        contentType,
+        contentLength,
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erro ao baixar relatório');
+        // Tenta extrair um corpo de erro útil
+        let parsedError: any = null;
+        let rawText: string | null = null;
+        try {
+          if (contentType.includes('application/json')) {
+            parsedError = await response.json();
+          } else {
+            rawText = await response.text();
+          }
+        } catch {
+          // ignorar falha ao ler corpo
+        }
+
+        console.error('Response error body:', parsedError || rawText || '(sem corpo)');
+        throw new Error(parsedError?.message || `Erro ao baixar relatório (status ${response.status})`);
       }
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      console.log('Blob:', { size: blob.size, type: blob.type });
+
+      const urlObject = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+      a.href = urlObject;
       a.download = `relatorio_${type}_${Date.now()}.xlsx`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(urlObject);
       document.body.removeChild(a);
 
-      success('Relatório baixado com sucesso!');
+      console.log('Status: sucesso');
+      success(`Relatório baixado com sucesso! [${reqId}]`);
     } catch (err: any) {
-      showError(err.message || 'Erro ao baixar relatório.');
+      // Logs de erro detalhados
+      const isAbort = err?.name === 'AbortError';
+      const isNetwork = err instanceof TypeError && /fetch/i.test(err.message || '') || /Failed to fetch/i.test(String(err?.message));
+
+      console.error('Erro no download de relatório:', {
+        reqId,
+        name: err?.name,
+        message: err?.message,
+        stack: err?.stack,
+        hints: [
+          'Verifique CORS do backend (Access-Control-Allow-Origin, Authorization no CORS).',
+          'Evite mixed content: front em https e API em http causam bloqueio.',
+          'Cheque VITE_API_URL e se a URL realmente responde este endpoint.',
+          'Teste o endpoint direto no navegador/Postman.',
+          'Em dispositivos móveis, verifique rede corporativa, VPN ou DNS.',
+        ],
+      });
+
+      if (isAbort) {
+        showError(`Tempo excedido ao baixar relatório. [${reqId}]`);
+      } else if (isNetwork) {
+        showError(`Falha de rede ao conectar no servidor. Veja o console para detalhes. [${reqId}]`);
+      } else {
+        showError(`${err?.message || 'Erro ao baixar relatório.'} [${reqId}]`);
+      }
     } finally {
+      console.groupEnd?.();
       setDownloadingReport(null);
     }
   };
