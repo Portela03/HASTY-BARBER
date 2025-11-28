@@ -8,6 +8,10 @@ import type { Barbearia } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+// Normaliza concatenação entre API_BASE e endpoint
+const joinUrl = (base: string, path: string) =>
+  `${base.replace(/\/+$/,'')}/${path.replace(/^\/+/,'')}`.replace(/\/{2,}/g,'/');
+
 // ====== Utilitários de Log/Diagnóstico ======
 const makeReqId = () => `RPT-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 const maskToken = (t?: string | null) => (t && t.length > 8 ? `${t.slice(0, 4)}...${t.slice(-4)}` : t || 'none');
@@ -80,6 +84,14 @@ const ReportsPage: React.FC = () => {
     setDownloadingReport(type);
 
     try {
+      // Checagem de mixed content (https front + http API)
+      const isHttps = window.location.protocol === 'https:';
+      if (isHttps && String(API_BASE).startsWith('http://')) {
+        console.error(`[${reqId}] Mixed content detectado: front HTTPS e API HTTP (${API_BASE}).`);
+        showError(`API em http bloqueada por HTTPS. Ajuste VITE_API_URL para https. [${reqId}]`);
+        return;
+      }
+
       let endpoint = '';
       switch (type) {
         case 'agendamentos':
@@ -94,31 +106,35 @@ const ReportsPage: React.FC = () => {
       }
 
       const token = localStorage.getItem('token');
-      const url = `${API_BASE}${endpoint}`;
+      const url = joinUrl(API_BASE, endpoint);
       const options: RequestInit = {
         method: 'GET',
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
+        mode: 'cors',
       };
 
-      // Logs antes da chamada
       console.groupCollapsed(`[Reports] Download ${type} (${reqId})`);
-      console.log('Request:', {
+      console.log('Pré-verificações:', {
         reqId,
-        url,
-        method: options.method,
-        headers: { ...options.headers, Authorization: maskToken(token) },
-        env: getEnvInfo(),
-        device: getDeviceInfo(),
-        endpoint,
+        navigatorOnline: navigator.onLine,
+        apiBase: API_BASE,
+        finalUrl: url,
+        httpsFrontend: isHttps,
+        token: maskToken(token),
       });
+
+      // Timeout com AbortController
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
+      options.signal = controller.signal;
 
       const start = performance.now();
       const response = await fetch(url, options);
       const durationMs = Math.round(performance.now() - start);
+      clearTimeout(timeoutId);
 
-      // Logs de resposta
       const contentType = response.headers.get('content-type') || 'unknown';
       const contentLength = response.headers.get('content-length') || 'unknown';
       console.log('Response meta:', {
@@ -130,7 +146,6 @@ const ReportsPage: React.FC = () => {
       });
 
       if (!response.ok) {
-        // Tenta extrair um corpo de erro útil
         let parsedError: any = null;
         let rawText: string | null = null;
         try {
@@ -139,10 +154,7 @@ const ReportsPage: React.FC = () => {
           } else {
             rawText = await response.text();
           }
-        } catch {
-          // ignorar falha ao ler corpo
-        }
-
+        } catch {}
         console.error('Response error body:', parsedError || rawText || '(sem corpo)');
         throw new Error(parsedError?.message || `Erro ao baixar relatório (status ${response.status})`);
       }
@@ -162,26 +174,35 @@ const ReportsPage: React.FC = () => {
       console.log('Status: sucesso');
       success(`Relatório baixado com sucesso! [${reqId}]`);
     } catch (err: any) {
-      // Logs de erro detalhados
       const isAbort = err?.name === 'AbortError';
-      const isNetwork = err instanceof TypeError && /fetch/i.test(err.message || '') || /Failed to fetch/i.test(String(err?.message));
+      const isNetwork =
+        err instanceof TypeError && /fetch/i.test(err.message || '') ||
+        /Failed to fetch/i.test(String(err?.message));
 
-      console.error('Erro no download de relatório:', {
-        reqId,
-        name: err?.name,
-        message: err?.message,
-        stack: err?.stack,
-        hints: [
-          'Verifique CORS do backend (Access-Control-Allow-Origin, Authorization no CORS).',
-          'Evite mixed content: front em https e API em http causam bloqueio.',
-          'Cheque VITE_API_URL e se a URL realmente responde este endpoint.',
-          'Teste o endpoint direto no navegador/Postman.',
-          'Em dispositivos móveis, verifique rede corporativa, VPN ou DNS.',
+      // Diagnósticos adicionais
+      const diagnostics = {
+        online: navigator.onLine,
+        apiBase: API_BASE,
+        frontendProtocol: window.location.protocol,
+        mixedContent: window.location.protocol === 'https:' && String(API_BASE).startsWith('http://'),
+        suggestions: [
+          'Verifique se o dispositivo está online.',
+          'Garanta que a API esteja acessível no mesmo host/rede.',
+          'Se o front está em HTTPS, configure a API para HTTPS.',
+          'Revise CORS no backend (Access-Control-Allow-Origin e Authorization).',
+          'Teste a URL diretamente no navegador/Postman.',
+          'Cheque DNS/VPN/Firewall em dispositivos problemáticos.',
         ],
-      });
+      };
+
+      console.error('Erro no download de relatório:', { reqId, error: err, diagnostics });
 
       if (isAbort) {
         showError(`Tempo excedido ao baixar relatório. [${reqId}]`);
+      } else if (!navigator.onLine) {
+        showError(`Dispositivo offline. Verifique a conexão. [${reqId}]`);
+      } else if (diagnostics.mixedContent) {
+        showError(`Bloqueio por mixed content (HTTPS/HTTP). Ajuste VITE_API_URL. [${reqId}]`);
       } else if (isNetwork) {
         showError(`Falha de rede ao conectar no servidor. Veja o console para detalhes. [${reqId}]`);
       } else {
