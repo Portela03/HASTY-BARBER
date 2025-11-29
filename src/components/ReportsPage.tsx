@@ -6,7 +6,17 @@ import Toast from './Toast';
 import { barbershopService } from '../services/api';
 import type { Barbearia } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE = (() => {
+  const envUrl = import.meta.env.VITE_API_URL?.trim();
+  if (envUrl) return envUrl.replace(/\/+$/,'')
+  const origin = window.location.origin.replace(/\/+$/,'')
+  console.warn('[Reports] VITE_API_URL não definida. Usando origin:', origin);
+  return origin;
+})();
+
+const buildUrl = (endpoint: string) => {
+  return `${API_BASE}/${endpoint.replace(/^\/+/,'')}`.replace(/\/{2,}/g,'/');
+}
 
 const ReportsPage: React.FC = () => {
   const { user } = useAuth();
@@ -53,9 +63,16 @@ const ReportsPage: React.FC = () => {
       return;
     }
 
+
     setDownloadingReport(type);
 
     try {
+      // Aviso se está usando localhost em produção
+      if (/localhost|127\.0\.0\.1/.test(API_BASE) && !/localhost|127\.0\.0\.1/.test(window.location.hostname)) {
+        console.warn('[Reports] API_BASE aponta para localhost fora de ambiente local. Defina VITE_API_URL corretamente.');
+        showError('API configurada como localhost fora do ambiente local. Ajuste VITE_API_URL.');
+        return;
+      }
       let endpoint = '';
       switch (type) {
         case 'agendamentos':
@@ -68,67 +85,103 @@ const ReportsPage: React.FC = () => {
           endpoint = `/api/reports/excel/fidelidade?barbearia_id=${barbershopId}`;
           break;
       }
+      const url = buildUrl(endpoint);
+      const response = await fetch(url, {
 
-      const response = await fetch(`${API_BASE}${endpoint}`, {
+
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       });
 
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Erro ao baixar relatório');
+
+
+
+
+
+
+
+
+
+
+
+
+
       }
 
       const blob = await response.blob();
-      const suggestedName = `relatorio_${type}_${Date.now()}.xlsx`;
+      const urlBlob = window.URL.createObjectURL(blob);
 
-      // Tentar abrir o diálogo "Salvar como" para o usuário escolher o diretório (ex: c:\Users\user\Documents)
-      if ('showSaveFilePicker' in window) {
-        try {
-          const handle = await (window as any).showSaveFilePicker({
-            suggestedName,
-            types: [
-              {
-                description: 'Planilha Excel',
-                accept: {
-                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-                },
-              },
-            ],
-          });
-          const writable = await handle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-          success('Relatório salvo com sucesso! Selecione sempre c:\\Users\\user\\Documents no diálogo para manter o padrão.');
-        } catch (pickErr: any) {
-          // Usuário cancelou ou deu erro: fallback para download automático na pasta padrão do navegador
-          const urlObject = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = urlObject;
-          a.download = suggestedName;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(urlObject);
-          document.body.removeChild(a);
-          success('Relatório baixado na pasta padrão de Downloads do navegador.');
-        }
-      } else {
-        // Fallback: sem suporte ao picker, baixa para Downloads
-        const urlObject = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = urlObject;
-        a.download = suggestedName;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(urlObject);
-        document.body.removeChild(a);
-        showError('Seu navegador não permite escolher a pasta. Use Chrome/Edge para selecionar c:\\Users\\user\\Documents.');
-      }
+
+      const a = document.createElement('a');
+      a.href = urlBlob;
+      a.download = `relatorio_${type}_${Date.now()}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(urlBlob);
+      document.body.removeChild(a);
+
+      success('Relatório baixado com sucesso!');
+
     } catch (err: any) {
       showError(err.message || 'Erro ao baixar relatório.');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     } finally {
+
       setDownloadingReport(null);
     }
   };
@@ -285,5 +338,3 @@ const ReportsPage: React.FC = () => {
 };
 
 export default ReportsPage;
-
-// Nota: o arquivo baixado via frontend é salvo na pasta de Downloads do sistema (definida pelo navegador).
