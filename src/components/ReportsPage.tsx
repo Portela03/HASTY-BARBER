@@ -16,7 +16,6 @@ const ReportsPage: React.FC = () => {
   const [barbershopId, setBarbershopId] = useState<number | null>(null);
   const [isLoadingShop, setIsLoadingShop] = useState(true);
   const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
-  const [escolherLocal, setEscolherLocal] = useState<boolean>(false);
 
   useEffect(() => {
     const loadBarbershop = async () => {
@@ -85,9 +84,8 @@ const ReportsPage: React.FC = () => {
       const blob = await response.blob();
       const suggestedName = `relatorio_${type}_${Date.now()}.xlsx`;
 
-      // Tenta abrir diálogo "Salvar como" se suportado e usuário quiser escolher local
-      const canPick = 'showSaveFilePicker' in window;
-      if (escolherLocal && canPick) {
+      // Tentar abrir o diálogo "Salvar como" para o usuário escolher o diretório (ex: c:\Users\user\Documents)
+      if ('showSaveFilePicker' in window) {
         try {
           const handle = await (window as any).showSaveFilePicker({
             suggestedName,
@@ -103,11 +101,9 @@ const ReportsPage: React.FC = () => {
           const writable = await handle.createWritable();
           await writable.write(blob);
           await writable.close();
+          success('Relatório salvo com sucesso! Selecione sempre c:\\Users\\user\\Documents no diálogo para manter o padrão.');
         } catch (pickErr: any) {
-          // Se o usuário cancelar o picker, faz fallback para download padrão
-          if (pickErr?.name !== 'AbortError') {
-            console.warn('Falha ao salvar via File System Access API, usando fallback:', pickErr);
-          }
+          // Usuário cancelou ou deu erro: fallback para download automático na pasta padrão do navegador
           const urlObject = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = urlObject;
@@ -116,9 +112,10 @@ const ReportsPage: React.FC = () => {
           a.click();
           window.URL.revokeObjectURL(urlObject);
           document.body.removeChild(a);
+          success('Relatório baixado na pasta padrão de Downloads do navegador.');
         }
       } else {
-        // Fallback: download automático para pasta padrão do navegador
+        // Fallback: sem suporte ao picker, baixa para Downloads
         const urlObject = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = urlObject;
@@ -127,9 +124,8 @@ const ReportsPage: React.FC = () => {
         a.click();
         window.URL.revokeObjectURL(urlObject);
         document.body.removeChild(a);
+        showError('Seu navegador não permite escolher a pasta. Use Chrome/Edge para selecionar c:\\Users\\user\\Documents.');
       }
-
-      success('Relatório baixado com sucesso!');
     } catch (err: any) {
       showError(err.message || 'Erro ao baixar relatório.');
     } finally {
@@ -158,20 +154,6 @@ const ReportsPage: React.FC = () => {
             <h1 className="text-5xl leading-tight font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 mb-3">Relatórios da Barbearia</h1>
             <p className="text-gray-300 text-sm">Baixe relatórios em Excel com dados detalhados</p>
           </div>
-        </div>
-
-        {/* Opção: escolher local do download */}
-        <div className="mb-4 flex items-center gap-2 text-gray-200">
-          <input
-            id="escolherLocal"
-            type="checkbox"
-            className="h-4 w-4 accent-amber-500"
-            checked={escolherLocal}
-            onChange={(e) => setEscolherLocal(e.target.checked)}
-          />
-          <label htmlFor="escolherLocal" className="text-sm">
-            Escolher onde salvar o arquivo (requer suporte do navegador)
-          </label>
         </div>
 
         {/* Cards de Relatórios */}
