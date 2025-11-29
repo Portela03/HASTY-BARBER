@@ -8,29 +8,6 @@ import type { Barbearia } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 const ReportsPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -39,6 +16,7 @@ const ReportsPage: React.FC = () => {
   const [barbershopId, setBarbershopId] = useState<number | null>(null);
   const [isLoadingShop, setIsLoadingShop] = useState(true);
   const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
+  const [escolherLocal, setEscolherLocal] = useState<boolean>(false);
 
   useEffect(() => {
     const loadBarbershop = async () => {
@@ -76,7 +54,6 @@ const ReportsPage: React.FC = () => {
       return;
     }
 
-
     setDownloadingReport(type);
 
     try {
@@ -94,101 +71,68 @@ const ReportsPage: React.FC = () => {
       }
 
       const response = await fetch(`${API_BASE}${endpoint}`, {
-
-
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       });
 
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Erro ao baixar relatório');
-
-
-
-
-
-
-
-
-
-
-
-
-
       }
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const suggestedName = `relatorio_${type}_${Date.now()}.xlsx`;
 
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `relatorio_${type}_${Date.now()}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // Tenta abrir diálogo "Salvar como" se suportado e usuário quiser escolher local
+      const canPick = 'showSaveFilePicker' in window;
+      if (escolherLocal && canPick) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName,
+            types: [
+              {
+                description: 'Planilha Excel',
+                accept: {
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+                },
+              },
+            ],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+        } catch (pickErr: any) {
+          // Se o usuário cancelar o picker, faz fallback para download padrão
+          if (pickErr?.name !== 'AbortError') {
+            console.warn('Falha ao salvar via File System Access API, usando fallback:', pickErr);
+          }
+          const urlObject = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = urlObject;
+          a.download = suggestedName;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(urlObject);
+          document.body.removeChild(a);
+        }
+      } else {
+        // Fallback: download automático para pasta padrão do navegador
+        const urlObject = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = urlObject;
+        a.download = suggestedName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(urlObject);
+        document.body.removeChild(a);
+      }
 
       success('Relatório baixado com sucesso!');
-
     } catch (err: any) {
       showError(err.message || 'Erro ao baixar relatório.');
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     } finally {
-
       setDownloadingReport(null);
     }
   };
@@ -214,6 +158,20 @@ const ReportsPage: React.FC = () => {
             <h1 className="text-5xl leading-tight font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 mb-3">Relatórios da Barbearia</h1>
             <p className="text-gray-300 text-sm">Baixe relatórios em Excel com dados detalhados</p>
           </div>
+        </div>
+
+        {/* Opção: escolher local do download */}
+        <div className="mb-4 flex items-center gap-2 text-gray-200">
+          <input
+            id="escolherLocal"
+            type="checkbox"
+            className="h-4 w-4 accent-amber-500"
+            checked={escolherLocal}
+            onChange={(e) => setEscolherLocal(e.target.checked)}
+          />
+          <label htmlFor="escolherLocal" className="text-sm">
+            Escolher onde salvar o arquivo (requer suporte do navegador)
+          </label>
         </div>
 
         {/* Cards de Relatórios */}
@@ -345,3 +303,5 @@ const ReportsPage: React.FC = () => {
 };
 
 export default ReportsPage;
+
+// Nota: o arquivo baixado via frontend é salvo na pasta de Downloads do sistema (definida pelo navegador).
