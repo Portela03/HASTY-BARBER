@@ -10,7 +10,6 @@ import BarbershopBookings from './components/BarbershopBookings';
 import BarberBookings from './components/BarberBookings';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
-import ReportsPage from './components/ReportsPage';
 
 import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
@@ -112,14 +111,6 @@ const AppRouter: React.FC = () => {
           />
           
           {/* Rota de Relatórios - Apenas Proprietário */}
-          <Route
-            path="/barbearias/:id/reports"
-            element={
-              isAuthenticated
-                ? (user?.tipo_usuario === 'proprietario' ? <ReportsPage /> : <Navigate to="/dashboard" replace />)
-                : <Navigate to="/login" replace />
-            }
-          />
  
           <Route 
             path="/" 
